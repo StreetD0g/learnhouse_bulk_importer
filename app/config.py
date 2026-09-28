@@ -23,6 +23,9 @@ class Settings:
     learnhouse_org_id: str
     learnhouse_org_slug: str
     learnhouse_token_file: Path
+    import_root: Path
+    data_dir: Path
+    import_workers: int
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -37,6 +40,9 @@ class Settings:
             learnhouse_token_file=Path(
                 _value("LEARNHOUSE_TOKEN_FILE", "/config/learnhouse-importer.env")
             ),
+            import_root=Path(_value("IMPORT_ROOT", "/imports")),
+            data_dir=Path(_value("DATA_DIR", "/data")),
+            import_workers=max(1, int(_value("IMPORT_WORKERS", "1"))),
         )
 
     def validation_errors(self) -> list[str]:
@@ -69,18 +75,22 @@ class Settings:
             ) from error
 
     def has_api_token(self) -> bool:
+        return self.get_api_token() is not None
+
+    def get_api_token(self) -> str | None:
         try:
             lines = self.learnhouse_token_file.read_text(encoding="utf-8").splitlines()
         except OSError:
-            return False
+            return None
         for line in lines:
             value = line.strip()
             if not value or value.startswith("#") or "=" not in value:
                 continue
             key, token = value.split("=", 1)
             if key.strip() == "LEARNHOUSE_API_TOKEN":
-                return bool(token.strip().strip('"').strip("'"))
-        return False
+                token = token.strip().strip('"').strip("'")
+                return token or None
+        return None
 
 
 settings = Settings.from_environment()

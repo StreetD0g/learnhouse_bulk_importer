@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Dashboard · LearnHouse Course Importer{% endblock %}
 {% block content %}
-<div class="app-shell">
+<div class="app-shell" data-token-configured="{{ 'true' if connection_configured else 'false' }}">
   <aside class="sidebar" aria-label="Hauptnavigation">
     <a class="brand" href="/" aria-label="Zum Dashboard">
       <img src="{{ url_for('static', path='brand/logo.png') }}" alt="">
@@ -9,8 +9,8 @@
     </a>
     <nav>
       <a class="nav-link is-active" href="/">Übersicht</a>
-      <span class="nav-link is-disabled">Importe <small>Demnächst</small></span>
-      <span class="nav-link is-disabled">Verlauf <small>Demnächst</small></span>
+      <a class="nav-link" href="#courses">Importe</a>
+      <a class="nav-link" href="#history">Verlauf</a>
       <a class="nav-link" href="/settings">Einstellungen</a>
     </nav>
     <form method="post" action="/logout" class="logout-form">
@@ -24,33 +24,66 @@
       <div>
         <p class="eyebrow">LEARNHOUSE</p>
         <h1>Importer Dashboard</h1>
-        <p class="lead">Kursordner prüfen, strukturiert importieren und Fortschritt verfolgen.</p>
+        <p class="lead">Kurse prüfen, gezielt importieren und jeden Upload nachvollziehen.</p>
       </div>
-      <div class="connection-state {% if not connection_configured %}is-warning{% endif %}">
-        <span aria-hidden="true"></span>
-        {% if connection_configured %}API-Token vorhanden{% else %}API-Token fehlt{% endif %}
+      <div class="header-actions">
+        <button class="button button-quiet" id="connectionTest" type="button">Verbindung testen</button>
+        <div class="connection-state {% if not connection_configured %}is-warning{% endif %}" id="tokenStatus">
+          <span aria-hidden="true"></span>
+          {% if connection_configured %}API-Token vorhanden{% else %}API-Token fehlt{% endif %}
+        </div>
       </div>
     </header>
 
+    <p class="live-message" id="liveMessage" role="status" aria-live="polite"></p>
+
     <section class="stats" aria-label="Importübersicht">
-      <article><p>Bereite Kurse</p><strong>–</strong><small>Scan steht noch aus</small></article>
-      <article><p>Aktive Importe</p><strong>0</strong><small>Keine Aufgabe aktiv</small></article>
-      <article><p>Importiert</p><strong>0</strong><small>Verlauf wird aufgebaut</small></article>
-      <article><p>Fehler / Übersprungen</p><strong>0</strong><small>Keine Einträge</small></article>
+      <article><p>Bereite Kurse</p><strong id="readyCount">{{ summary.ready }}</strong><small>Im Quellordner gefunden</small></article>
+      <article><p>Aktive Importe</p><strong id="runningCount">{{ summary.running }}</strong><small>Gerade in Bearbeitung</small></article>
+      <article><p>Erfolgreich importiert</p><strong id="successCount">{{ summary.success }}</strong><small>Abgeschlossene Vorgänge</small></article>
+      <article><p>Fehler / Teilimporte</p><strong id="problemCount">{{ summary.problems }}</strong><small>Benötigen Aufmerksamkeit</small></article>
     </section>
 
-    <section class="panel empty-state" aria-labelledby="scan-title">
-      <div>
-        <p class="eyebrow">NÄCHSTER SCHRITT</p>
-        <h2 id="scan-title">Kursordner scannen</h2>
-        <p>Der Importer wird die read-only eingebundenen Kursordner erkennen, vor dem Import prüfen und als Vorschau darstellen.</p>
-        <dl class="config-summary">
-          <div><dt>LearnHouse</dt><dd>{{ learnhouse_url }}</dd></div>
-          <div><dt>Organisation</dt><dd>{{ org_slug }} · ID {{ org_id }}</dd></div>
-        </dl>
+    <section class="workspace" id="courses" aria-labelledby="courses-title">
+      <div class="panel course-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">QUELLE</p><h2 id="courses-title">Gefundene Kurse</h2></div>
+          <div class="panel-actions">
+            <button class="button button-quiet" id="scanButton" type="button">Ordner scannen</button>
+            <button class="button button-primary" id="importSelected" type="button">Ausgewählte importieren</button>
+          </div>
+        </div>
+        <div class="import-options">
+          <label>Library-Zielordner <input id="libraryPath" type="text" placeholder="z. B. IT-Security / ISO & Compliance"></label>
+          <label class="check-option"><input id="publishCourses" type="checkbox"> Nach erfolgreichem Import veröffentlichen</label>
+          <label class="check-option"><input id="skipDuplicates" type="checkbox" checked> Doppelte Kurse überspringen</label>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th><input id="selectAll" type="checkbox" aria-label="Alle Kurse auswählen"></th><th>Kurs</th><th>Kapitel</th><th>Lektionen</th><th>Größe</th><th>Library</th><th>Status</th></tr></thead>
+            <tbody id="courseRows"><tr><td colspan="7" class="table-empty">Kursordner werden geladen …</td></tr></tbody>
+          </table>
+        </div>
       </div>
-      <button class="button button-primary" type="button" disabled title="Wird mit dem Scanner aktiviert">Ordner scannen</button>
+
+      <aside class="panel preview-panel" aria-live="polite">
+        <p class="eyebrow">VORSCHAU</p>
+        <div id="preview"><h2>Kurs auswählen</h2><p>Wähle links einen Kurs, um seine Kapitel, Lektionen und übersprungenen Dateien zu prüfen.</p></div>
+      </aside>
+    </section>
+
+    <section class="panel job-panel hidden" id="jobPanel" aria-labelledby="job-title">
+      <div class="panel-heading"><div><p class="eyebrow">IMPORTFORTSCHRITT</p><h2 id="job-title">Aktiver Import</h2><p id="jobMessage">Wird vorbereitet …</p></div><span class="status-badge" id="jobStatus">queued</span></div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <p class="progress-value" id="progressValue">0 %</p>
+      <pre id="jobLog"></pre>
+    </section>
+
+    <section class="panel history-panel" id="history" aria-labelledby="history-title">
+      <div class="panel-heading"><div><p class="eyebrow">VERLAUF</p><h2 id="history-title">Letzte Importe</h2></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Status</th><th>Fortschritt</th><th>Details</th><th></th></tr></thead><tbody id="historyRows"><tr><td colspan="5" class="table-empty">Noch keine Importe.</td></tr></tbody></table></div>
     </section>
   </main>
 </div>
+<script src="{{ url_for('static', path='app.js') }}"></script>
 {% endblock %}

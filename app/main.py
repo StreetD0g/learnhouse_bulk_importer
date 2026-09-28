@@ -1,19 +1,28 @@
 from __future__ import annotations
 
 import secrets
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
-from fastapi import FastAPI, Form, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Form, HTTPException, Request, status
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, Field
 from starlette.middleware.sessions import SessionMiddleware
 
 from .config import settings
+from .db import ImportStore
+from .importer import ImportRunner
+from .learnhouse import LearnHouseClient, LearnHouseError
+from .scanner import scan_root
 
 APP_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=APP_DIR / "templates")
+store = ImportStore(settings.data_dir / "importer.sqlite3")
+executor = ThreadPoolExecutor(max_workers=settings.import_workers, thread_name_prefix="course-import")
 
 
 @asynccontextmanager
@@ -22,15 +31,12 @@ async def lifespan(_: FastAPI):
     if missing:
         raise RuntimeError(f"Setze sichere Werte für: {', '.join(missing)}")
     settings.ensure_token_file()
+    store.mark_running_as_interrupted()
     yield
+    executor.shutdown(wait=False, cancel_futures=False)
 
 
-app = FastAPI(
-    title="LearnHouse Course Importer",
-    docs_url=None,
-    redoc_url=None,
-    lifespan=lifespan,
-)
+app = FastAPI(title="LearnHouse Course Importer", docs_url=None, redoc_url=None, lifespan=lifespan)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret or "invalid-unconfigured-secret",
@@ -41,6 +47,13 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 
 
+class ImportRequest(BaseModel):
+    course_folders: list[str] = Field(min_length=1, max_length=200)
+    library_path: str = Field(default="", max_length=500)
+    publish: bool = False
+    skip_duplicates: bool = True
+
+
 def authenticated(request: Request) -> bool:
     return request.session.get("authenticated") is True
 
@@ -49,7 +62,18 @@ def redirect_to_login() -> RedirectResponse:
     return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
 
 
+def require_api_login(request: Request) -> None:
+    if not authenticated(request):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Anmeldung erforderlich")
+
+
+def scan_courses() -> list[Any]:
+    return scan_root(settings.import_root)
+
+
 def dashboard_context(request: Request) -> dict[str, object]:
+    courses = scan_courses()
+    jobs = store.jobs()
     return {
         "learnhouse_url": settings.learnhouse_url,
         "org_id": settings.learnhouse_org_id,
@@ -57,7 +81,28 @@ def dashboard_context(request: Request) -> dict[str, object]:
         "csrf_token": request.session["csrf_token"],
         "connection_configured": settings.has_api_token(),
         "token_file": str(settings.learnhouse_token_file),
+        "summary": {
+            "ready": len(courses),
+            "running": sum(job["status"] == "running" for job in jobs),
+            "success": sum(job["status"] == "success" for job in jobs),
+            "problems": sum(job["status"] in {"partial", "failed", "interrupted"} for job in jobs),
+        },
     }
+
+
+def start_job(job_id: str) -> None:
+    try:
+        with LearnHouseClient(settings) as client:
+            ImportRunner(store, client, str(settings.import_root)).run(job_id)
+    except LearnHouseError as error:
+        store.update_job(job_id, status="failed", message=str(error), log_entry=f"FEHLER: {error}")
+    except Exception:
+        store.update_job(
+            job_id,
+            status="failed",
+            message="Unerwarteter Importfehler. Details im Container-Log prüfen.",
+            log_entry="FEHLER: Unerwarteter Importfehler",
+        )
 
 
 @app.get("/healthz", include_in_schema=False)
@@ -85,10 +130,7 @@ def login(request: Request, username: str = Form(), password: str = Form()):
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
     request.session.clear()
-    request.session.update(
-        authenticated=True,
-        csrf_token=secrets.token_urlsafe(32),
-    )
+    request.session.update(authenticated=True, csrf_token=secrets.token_urlsafe(32))
     return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -112,3 +154,76 @@ def connection_settings(request: Request):
     if not authenticated(request):
         return redirect_to_login()
     return templates.TemplateResponse(request, "settings.html", dashboard_context(request))
+
+
+@app.get("/api/scan", include_in_schema=False)
+def api_scan(request: Request) -> dict[str, object]:
+    require_api_login(request)
+    return {"courses": [course.to_dict() for course in scan_courses()]}
+
+
+@app.post("/api/connection/test", include_in_schema=False)
+def api_test_connection(request: Request) -> dict[str, object]:
+    require_api_login(request)
+    if not settings.has_api_token():
+        raise HTTPException(status.HTTP_409_CONFLICT, "Kein API-Token konfiguriert")
+    try:
+        with LearnHouseClient(settings) as client:
+            return client.test_connection()
+    except LearnHouseError as error:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(error)) from error
+
+
+@app.get("/api/courses/{folder_name}/thumbnail", include_in_schema=False)
+def api_thumbnail(request: Request, folder_name: str):
+    require_api_login(request)
+    course = next((course for course in scan_courses() if course.folder_name == folder_name), None)
+    if not course or not course.thumbnail:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kein Kursbild vorhanden")
+    return FileResponse(course.thumbnail)
+
+
+@app.get("/api/jobs", include_in_schema=False)
+def api_jobs(request: Request) -> dict[str, object]:
+    require_api_login(request)
+    return {"jobs": store.jobs()}
+
+
+@app.get("/api/jobs/{job_id}", include_in_schema=False)
+def api_job(request: Request, job_id: str) -> dict[str, object]:
+    require_api_login(request)
+    job = store.job(job_id)
+    if not job:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Import nicht gefunden")
+    return job
+
+
+@app.post("/api/import", include_in_schema=False)
+def api_import(request: Request, body: ImportRequest) -> dict[str, str]:
+    require_api_login(request)
+    if not settings.has_api_token():
+        raise HTTPException(status.HTTP_409_CONFLICT, "Kein API-Token konfiguriert")
+    available = {course.folder_name: course for course in scan_courses()}
+    missing = [folder for folder in body.course_folders if folder not in available]
+    if missing:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Kursordner nicht gefunden: {', '.join(missing)}")
+    selected = [available[folder] for folder in body.course_folders]
+    job_id = secrets.token_hex(12)
+    store.create_job(job_id, body.model_dump(), selected)
+    executor.submit(start_job, job_id)
+    return {"job_id": job_id}
+
+
+@app.post("/api/jobs/{job_id}/resume", include_in_schema=False)
+def api_resume_job(request: Request, job_id: str) -> dict[str, str]:
+    require_api_login(request)
+    if not settings.has_api_token():
+        raise HTTPException(status.HTTP_409_CONFLICT, "Kein API-Token konfiguriert")
+    job = store.job(job_id)
+    if not job:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Import nicht gefunden")
+    if job["status"] == "running":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Import läuft bereits")
+    store.update_job(job_id, status="queued", message="Wiederaufnahme wird vorbereitet", log_entry="Wiederaufnahme angefordert")
+    executor.submit(start_job, job_id)
+    return {"job_id": job_id}

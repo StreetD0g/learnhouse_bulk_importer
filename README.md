@@ -2,6 +2,66 @@
 
 Ein self-hosted Bulk-Importer für lokale LearnHouse-Kursordner. Das Projekt befindet sich im Aufbau.
 
+> Dieses Projekt ist nicht mit LearnHouse verbunden oder von LearnHouse unterstützt.
+
+## Funktionsumfang des MVP
+
+- Scan lokaler Kursordner mit Vorschau von Kapiteln, Lektionen und übersprungenen Dateien
+- Import von `.mp4`, `.webm` und `.pdf` über die LearnHouse-API
+- Erstellen von Kursen, Kapiteln und verschachtelten Library-Ordnern
+- Optionales Veröffentlichen erst nach vollständigem Kursimport
+- Persistenter Importverlauf und Wiederaufnahme nach Container-Neustart
+- Ein eigener, Compose-konfigurierter Zugang zum Importer-Webinterface
+
+Nicht unterstützt werden aktuell Untertitel, Office-Dateien, Audio, SCORM und
+direkter Zugriff auf die LearnHouse-Datenbank oder deren Content-Verzeichnis.
+
+## Schnellstart
+
+1. Bearbeite die Platzhalter für `IMPORTER_PASSWORD` und `SESSION_SECRET` in
+   [`docker-compose.yml`](docker-compose.yml).
+2. Setze `LEARNHOUSE_URL`, Organisations-ID und Organisations-Slug passend zur
+   LearnHouse-Instanz.
+3. Starte den Dienst mit `docker compose up -d --build`.
+4. Ergänze den API-Token in der automatisch angelegten Datei
+   `config/learnhouse-importer.env`.
+5. Öffne `http://HOST:8099`, melde dich an und teste die Verbindung.
+
+Der Importer startet absichtlich nicht mit unveränderten Passwort- oder
+Session-Schlüssel-Platzhaltern.
+
+## Kursstruktur
+
+```text
+imports/
+└── Example course/
+    ├── course.json                 # optional
+    ├── thumbnail.png               # optional
+    ├── 01 Start und Orientierung/
+    │   ├── 001 Willkommen.mp4
+    │   └── 002 Kursaufbau.mp4
+    └── 02 Grundlagen/
+        ├── 001 Informationssicherheit.webm
+        └── 002 Handout.pdf
+```
+
+Der oberste Ordner wird zu einem LearnHouse-Kurs, jeder direkte Unterordner zu
+einem Kapitel. Nummerierungspräfixe wie `01`, `01 -`, `001` und `001.` werden
+aus sichtbaren Titeln entfernt, bestimmen aber weiter die natürliche Sortierung.
+
+`course.json` kann die Metadaten überschreiben:
+
+```json
+{
+  "name": "Example course",
+  "description": "A practical guide for internal processes",
+  "about": "Internal processes and audit readiness.",
+  "library_path": "Department/Topic",
+  "thumbnail": "thumbnail.png",
+  "publish": false
+}
+```
+
 ## Verbindungsmodell: lokal oder extern
 
 Der Importer kommuniziert serverseitig ausschließlich über die LearnHouse-REST-
@@ -75,6 +135,17 @@ Der Container muss den Konfigurationsordner beschreiben dürfen, damit er die
 Vorlage beim ersten Start anlegen kann. Die Kursquelle unter `/imports` bleibt
 hingegen read-only.
 
+## Importverlauf und Wiederaufnahme
+
+Der Importer speichert Job-, Kurs-, Kapitel- und Lektionsstatus in der lokalen
+SQLite-Datenbank des `/data`-Volumes. Der API-Token wird dabei niemals
+gespeichert. Nach einem Container-Neustart werden laufende Jobs als unterbrochen
+markiert und können in der Oberfläche fortgesetzt werden. Bereits erfolgreich
+hochgeladene Lektionen werden dabei nicht erneut gesendet.
+
+Ein Import mit Dateifehlern wird als Teilimport markiert. Erfolgreich erstellte
+LearnHouse-Daten werden im MVP nicht automatisch gelöscht.
+
 ## Sicherheit
 
 - Der Importer verwendet eine eigene Login-Session und speichert keine Nutzer
@@ -82,3 +153,5 @@ hingegen read-only.
 - Der LearnHouse-Token bleibt ausschließlich in der lokalen Konfigurationsdatei
   auf dem Host und wird nicht an den Browser ausgeliefert.
 - Das Repository enthält keine echten Zugangsdaten.
+- Der Importer schreibt nie direkt in die LearnHouse-Datenbank und kopiert nie
+  Dateien direkt in das LearnHouse-Content-Verzeichnis.

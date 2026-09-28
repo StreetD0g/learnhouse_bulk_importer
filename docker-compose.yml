@@ -36,5 +36,30 @@ services:
     cap_drop:
       - ALL
 
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+x-casaos:
+  id: io.github.streetd0g.learnhouse-course-importer
+  main: importer
+  index: /
+  port_map: "8099"
+  scheme: http
+  title:
+    en_US: LearnHouse Course Importer
+    de_DE: LearnHouse Course Importer
+  tagline:
+    en_US: Import local course folders into LearnHouse
+    de_DE: Importiert lokale Kursordner in LearnHouse
+  description:
+    en_US: A self-hosted bulk course importer for LearnHouse.
+    de_DE: Ein self-hosted Bulk-Importer für LearnHouse-Kurse.
+  category: Education
+  architectures:
+    - amd64
+
 volumes:
   importer_data:
