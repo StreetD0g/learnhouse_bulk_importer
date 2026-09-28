@@ -87,9 +87,12 @@ function renderPreview(course) {
   preview.append(meta)
   if (course.library_path) preview.append(element('p', `Library: ${course.library_path}`))
   const tree = element('div', null, 'preview-tree')
-  for (const chapter of course.chapters) {
-    const chapterNode = element('div', null, 'preview-chapter')
-    chapterNode.append(element('strong', `${chapter.name} (${chapter.lesson_count})`))
+  for (const [index, chapter] of course.chapters.entries()) {
+    const chapterNode = element('details', null, 'preview-chapter')
+    chapterNode.open = index === 0
+    const summary = element('summary')
+    summary.append(element('strong', chapter.name), element('span', `${chapter.lesson_count} Lektionen`, 'chapter-count'))
+    chapterNode.append(summary)
     const lessons = element('ul', null, 'preview-lessons')
     for (const lesson of chapter.lessons.slice(0, 6)) lessons.append(element('li', lesson.title))
     if (chapter.lesson_count > 6) lessons.append(element('li', `… ${chapter.lesson_count - 6} weitere Lektionen`))

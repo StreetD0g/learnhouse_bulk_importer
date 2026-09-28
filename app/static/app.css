@@ -102,14 +102,20 @@ tbody tr:hover, tbody tr.is-selected { background: rgb(22 68 112 / 40%); }
 .status-badge { display: inline-flex; padding: .3rem .55rem; color: #c4ddfa; border: 1px solid #31618f; border-radius: 999px; background: #102c4a; font-size: .78rem; white-space: nowrap; }
 .status-badge.success { color: #b7f7dc; border-color: #176b56; background: rgb(6 87 62 / 34%); }
 .status-badge.partial, .status-badge.failed, .status-badge.interrupted { color: #ffe0a1; border-color: #93661b; background: rgb(111 71 10 / 34%); }
-.preview-panel { position: sticky; top: 1rem; }
+.preview-panel { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow: auto; }
 .preview-panel h2 { margin-bottom: .65rem; }
 .preview-panel p { color: var(--muted); line-height: 1.55; }
 .preview-meta { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1rem 0; color: var(--muted); font-size: .85rem; }
 .preview-tree { display: grid; gap: .75rem; margin: 1rem 0; }
-.preview-chapter { padding: .75rem; border: 1px solid var(--line); border-radius: .65rem; background: rgb(8 23 39 / 55%); }
-.preview-chapter strong { display: block; margin-bottom: .4rem; }
-.preview-lessons { margin: 0; padding-left: 1.1rem; color: var(--muted); font-size: .84rem; }
+.preview-chapter { border: 1px solid var(--line); border-radius: .65rem; background: rgb(8 23 39 / 55%); }
+.preview-chapter summary { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding: .75rem; cursor: pointer; list-style: none; }
+.preview-chapter summary::-webkit-details-marker { display: none; }
+.preview-chapter summary::after { content: '+'; color: #8abdf3; font-size: 1.15rem; font-weight: 700; }
+.preview-chapter[open] summary { border-bottom: 1px solid var(--line); }
+.preview-chapter[open] summary::after { content: '-'; }
+.preview-chapter strong { display: block; }
+.chapter-count { flex: 0 0 auto; color: var(--muted); font-size: .76rem; }
+.preview-lessons { margin: .75rem; padding-left: 1.1rem; color: var(--muted); font-size: .84rem; }
 .preview-skipped { padding: .75rem; color: #ffe0a1; border: 1px solid #93661b; border-radius: .65rem; background: rgb(111 71 10 / 18%); font-size: .84rem; }
 .job-panel { margin-top: 1rem; }
 .progress { height: .7rem; overflow: hidden; border: 1px solid var(--line); border-radius: 999px; background: #081728; }
@@ -140,7 +146,7 @@ pre { max-height: 17rem; overflow: auto; padding: 1rem; color: #c9d9ec; border: 
   .logout-form { margin-top: 0; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .workspace { grid-template-columns: 1fr; }
-  .preview-panel { position: static; }
+  .preview-panel { position: static; max-height: none; }
 }
 @media (max-width: 560px) {
   .login-shell { padding: 1rem; }

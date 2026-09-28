@@ -68,6 +68,12 @@ class LearnHouseClient:
             detail = payload.get("detail", payload) if isinstance(payload, dict) else payload
         except ValueError:
             pass
+        if isinstance(detail, list):
+            detail = "; ".join(
+                f"{'.'.join(str(part) for part in item.get('loc', [])[1:]) or 'Eingabe'}: {item.get('msg', 'ungültig')}"
+                for item in detail
+                if isinstance(item, dict)
+            ) or detail
         raise LearnHouseError(f"LearnHouse API {response.status_code}: {self._redact(detail)}")
 
     def _request(self, method: str, path: str, *, retry: bool = False, **kwargs: Any) -> httpx.Response:
@@ -118,20 +124,24 @@ class LearnHouseClient:
         about: str,
         thumbnail: str | None,
     ) -> dict[str, Any]:
-        data = {
-            "name": name,
-            "description": description,
-            "about": about,
-            "public": "false",
-            "thumbnail_type": "image",
-        }
+        description = description.strip() or name
+        about = about.strip() or description
         handle = None
         try:
-            files = None
+            # Some self-hosted LearnHouse versions only parse textual fields
+            # when they are multipart parts themselves, not ``data=`` fields.
+            files: dict[str, tuple[None, str] | tuple[str, Any, str]] = {
+                "name": (None, name),
+                "description": (None, description),
+                "about": (None, about),
+                "public": (None, "false"),
+                "thumbnail_type": (None, "image"),
+            }
             if thumbnail:
                 path = Path(thumbnail)
                 handle = path.open("rb")
                 files = {
+                    **files,
                     "thumbnail": (
                         path.name,
                         handle,
@@ -141,7 +151,6 @@ class LearnHouseClient:
             return self._request(
                 "POST",
                 f"/courses/?org_id={quote(str(self.org_id), safe='')}",
-                data=data,
                 files=files,
             ).json()
         finally:

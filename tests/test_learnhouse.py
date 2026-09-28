@@ -45,6 +45,23 @@ def test_api_error_redacts_token(tmp_path: Path) -> None:
     assert "[REDACTED]" in str(error.value)
 
 
+def test_create_course_uses_multipart_and_fills_required_empty_text(tmp_path: Path) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={"id": 1, "course_uuid": "course-uuid"})
+
+    with LearnHouseClient(settings(tmp_path / "token.env"), transport=httpx.MockTransport(handler)) as client:
+        client.create_course(name="Course", description="", about="", thumbnail=None)
+
+    request = requests[0]
+    assert request.headers["content-type"].startswith("multipart/form-data;")
+    assert b'name="description"' in request.content
+    assert request.content.count(b"Course") >= 3
+    assert b'name="about"' in request.content
+
+
 def test_selected_target_controls_server_and_organization(tmp_path: Path) -> None:
     requests: list[httpx.Request] = []
 
