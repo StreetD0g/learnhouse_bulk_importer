@@ -17,7 +17,9 @@ services:
       IMPORTER_PASSWORD: "CHANGE_ME_TO_A_LONG_UNIQUE_PASSWORD"
       SESSION_SECRET: "CHANGE_ME_TO_A_LONG_RANDOM_SESSION_SECRET"
       COOKIE_SECURE: "false"
-      LEARNHOUSE_URL: "http://learnhouse"
+      # Standard: öffentliche HTTPS-Adresse. Für eine direkte lokale Docker-
+      # Verbindung siehe docker-compose.local.yml.example.
+      LEARNHOUSE_URL: "https://learn.example.com"
       LEARNHOUSE_ORG_ID: "1"
       LEARNHOUSE_ORG_SLUG: "default"
       LEARNHOUSE_TOKEN_FILE: "/config/learnhouse-importer.env"
@@ -29,17 +31,10 @@ services:
       # Beim ersten Start erstellt der Container hier eine leere Token-Datei.
       - ./config:/config
 
-    networks:
-      - learnhouse
-
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-
-networks:
-  learnhouse:
-    external: true
 
 volumes:
   importer_data:

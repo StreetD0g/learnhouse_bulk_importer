@@ -1,0 +1,17 @@
+# Optionale Ergänzung, wenn Importer und LearnHouse auf demselben Docker-Host
+# laufen und das externe Netzwerk "learnhouse" bereits existiert.
+#
+# Kopiere diese Datei nach docker-compose.local.yml und starte mit:
+# docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+
+services:
+  importer:
+    environment:
+      LEARNHOUSE_URL: "http://learnhouse"
+    networks:
+      - default
+      - learnhouse
+
+networks:
+  learnhouse:
+    external: true

@@ -2,6 +2,50 @@
 
 Ein self-hosted Bulk-Importer für lokale LearnHouse-Kursordner. Das Projekt befindet sich im Aufbau.
 
+## Verbindungsmodell: lokal oder extern
+
+Der Importer kommuniziert serverseitig ausschließlich über die LearnHouse-REST-
+API. Daher müssen Importer und LearnHouse nicht auf demselben Docker-Host oder
+im selben Docker-Netzwerk laufen. Das macht den Betrieb auf einem separaten NAS
+oder einem Rechner des Uploaders möglich.
+
+### Externes LearnHouse – Standard
+
+Die normale [`docker-compose.yml`](docker-compose.yml) benötigt kein
+`learnhouse`-Docker-Netzwerk. Trage die öffentliche HTTPS-Adresse ein:
+
+```yaml
+LEARNHOUSE_URL: "https://learn.example.com"
+```
+
+Das ist die empfohlene Variante, wenn die Kursdateien und LearnHouse auf
+unterschiedlichen Hosts liegen. Die Kommunikation läuft vom Importer-Container
+über HTTPS zum Reverse Proxy der LearnHouse-Instanz. CORS ist dabei nicht
+relevant, weil keine Browser-Anfrage an LearnHouse erfolgt.
+
+Der Reverse Proxy vor LearnHouse muss große, lang laufende Uploads zulassen. Bei
+Nginx betrifft das insbesondere `client_max_body_size` sowie die Proxy-
+Timeouts; ein vorgeschalteter CDN-, Tunnel- oder Proxy-Dienst darf keine
+niedrigeren Upload- oder Zeitlimits erzwingen. Für den vorgesehenen MVP sollten
+MP4/WebM bis 5 GB und PDFs bis 500 MB möglich sein.
+
+### Direkte lokale Docker-Verbindung – optional
+
+Wenn beide Dienste auf demselben Docker-Host laufen, kann der Importer statt
+des öffentlichen Umwegs direkt `http://learnhouse` verwenden. Dazu:
+
+1. `docker-compose.local.yml.example` nach `docker-compose.local.yml` kopieren.
+2. Prüfen, dass das externe Docker-Netzwerk `learnhouse` existiert.
+3. Beide Dateien gemeinsam starten:
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+   ```
+
+Die lokale Ergänzungsdatei ist von Git ausgeschlossen. Dadurch bleibt die
+Standardinstallation portabel und öffentliche Repository-Inhalte enthalten
+keine host-spezifische Netzwerk-Konfiguration.
+
 ## Konfiguration in Docker Compose
 
 Für ZimaOS/CasaOS werden Benutzername, Passwort und Session-Schlüssel direkt im
