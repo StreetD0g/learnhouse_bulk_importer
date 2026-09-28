@@ -206,6 +206,9 @@ def scan_root(import_root: Path) -> list[Course]:
     courses = []
     for directory in _sorted(path for path in import_root.iterdir() if path.is_dir() and _visible(path)):
         course = scan_course(directory)
-        if course.chapters or course.skipped:
+        # A preparation or project folder beside a course can contain files
+        # which are deliberately skipped. It is not an importable course
+        # unless at least one supported lesson was found.
+        if any(chapter.lessons for chapter in course.chapters):
             courses.append(course)
     return courses
