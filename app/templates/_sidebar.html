@@ -1,0 +1,18 @@
+{% macro navigation(active, csrf_token) -%}
+<aside class="sidebar" aria-label="Hauptnavigation">
+  <a class="brand" href="/" aria-label="Zur Übersicht">
+    <img src="{{ url_for('static', path='brand/logo.png') }}" alt="">
+    <span><strong>Course Importer</strong><small>LearnHouse</small></span>
+  </a>
+  <nav>
+    <a class="nav-link {% if active == 'overview' %}is-active{% endif %}" href="/">Übersicht</a>
+    <a class="nav-link {% if active == 'imports' %}is-active{% endif %}" href="/imports">Importe</a>
+    <a class="nav-link {% if active == 'history' %}is-active{% endif %}" href="/history">Verlauf</a>
+    <a class="nav-link {% if active == 'settings' %}is-active{% endif %}" href="/settings">Einstellungen</a>
+  </nav>
+  <form method="post" action="/logout" class="logout-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="button button-quiet" type="submit">Abmelden</button>
+  </form>
+</aside>
+{%- endmacro %}

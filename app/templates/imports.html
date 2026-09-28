@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_sidebar.html" import navigation with context %}
+{% block title %}Importe · LearnHouse Course Importer{% endblock %}
+{% block content %}
+<div class="app-shell" data-page="imports" data-token-configured="{{ 'true' if connection_configured else 'false' }}">
+  {{ navigation('imports', csrf_token) }}
+  <main class="dashboard">
+    <header class="page-header">
+      <div><p class="eyebrow">QUELLE</p><h1>Gefundene Kurse</h1><p class="lead">Kurs wählen, Kapitel bei Bedarf prüfen und gezielt importieren.</p></div>
+      <div class="header-actions"><button class="button button-quiet" id="connectionTest" type="button">Verbindung testen</button><div class="connection-state {% if not connection_configured %}is-warning{% endif %}"><span aria-hidden="true"></span>{% if connection_configured %}API-Token vorhanden{% else %}API-Token fehlt{% endif %}</div></div>
+    </header>
+    <p class="live-message" id="liveMessage" role="status" aria-live="polite"></p>
+    <section class="workspace" aria-labelledby="courses-title">
+      <div class="panel course-panel">
+        <div class="panel-heading"><div><p class="eyebrow">KURSQUELLE</p><h2 id="courses-title">Kurse</h2></div><div class="panel-actions"><button class="button button-quiet" id="scanButton" type="button">Ordner scannen</button><button class="button button-primary" id="importSelected" type="button">Ausgewählte importieren</button></div></div>
+        <div class="import-options"><label>Library-Zielordner <input id="libraryPath" type="text" placeholder="z. B. IT-Security / ISO & Compliance"></label><label class="check-option"><input id="publishCourses" type="checkbox"> Nach erfolgreichem Import veröffentlichen</label><label class="check-option"><input id="skipDuplicates" type="checkbox" checked> Doppelte Kurse überspringen</label><p class="target-summary" id="targetSummary">LearnHouse-Ziel wird geladen …</p></div>
+        <div class="table-wrap"><table><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Alle Kurse auswählen"></th><th>Kurs</th><th>Kapitel</th><th>Lektionen</th><th>Größe</th><th>Library</th><th>Status</th></tr></thead><tbody id="courseRows"><tr><td colspan="7" class="table-empty">Kursordner werden geladen …</td></tr></tbody></table></div>
+      </div>
+    </section>
+    <section class="panel job-panel hidden" id="jobPanel" aria-labelledby="job-title"><div class="panel-heading"><div><p class="eyebrow">IMPORTFORTSCHRITT</p><h2 id="job-title">Aktiver Import</h2><p id="jobMessage">Wird vorbereitet …</p></div><span class="status-badge" id="jobStatus">queued</span></div><div class="progress"><div id="progressBar"></div></div><p class="progress-value" id="progressValue">0 %</p><pre id="jobLog"></pre></section>
+  </main>
+</div>
+<dialog class="target-dialog" id="targetDialog" aria-labelledby="target-dialog-title"><form method="dialog" class="target-dialog-card"><div class="dialog-heading"><div><p class="eyebrow">IMPORTZIEL</p><h2 id="target-dialog-title">Zielorganisation festlegen</h2></div><button class="dialog-close" value="cancel" aria-label="Dialog schließen" type="submit">×</button></div><p>Die ausgewählten <strong id="targetCourseCount">0</strong> Kurse werden ausschließlich in diese LearnHouse-Organisation importiert.</p><label for="targetSelect">Zielorganisation</label><select id="targetSelect" name="target"><option>Lade Ziele …</option></select><p class="target-description" id="targetDescription"></p><div class="dialog-actions"><button class="button button-quiet" value="cancel" type="submit">Abbrechen</button><button class="button button-primary" id="confirmImport" type="button">Ziel bestätigen &amp; importieren</button></div></form></dialog>
+<script src="{{ url_for('static', path='app.js') }}"></script>
+{% endblock %}

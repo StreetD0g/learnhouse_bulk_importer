@@ -177,6 +177,20 @@ def connection_settings(request: Request):
     return templates.TemplateResponse(request, "settings.html", dashboard_context(request))
 
 
+@app.get("/imports", response_class=HTMLResponse, include_in_schema=False)
+def imports_page(request: Request):
+    if not authenticated(request):
+        return redirect_to_login()
+    return templates.TemplateResponse(request, "imports.html", dashboard_context(request))
+
+
+@app.get("/history", response_class=HTMLResponse, include_in_schema=False)
+def history_page(request: Request):
+    if not authenticated(request):
+        return redirect_to_login()
+    return templates.TemplateResponse(request, "history.html", dashboard_context(request))
+
+
 @app.get("/api/scan", include_in_schema=False)
 def api_scan(request: Request) -> dict[str, object]:
     require_api_login(request)

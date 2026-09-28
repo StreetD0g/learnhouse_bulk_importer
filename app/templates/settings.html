@@ -1,23 +1,9 @@
 {% extends "base.html" %}
+{% from "_sidebar.html" import navigation with context %}
 {% block title %}Einstellungen · LearnHouse Course Importer{% endblock %}
 {% block content %}
-<div class="app-shell">
-  <aside class="sidebar" aria-label="Hauptnavigation">
-    <a class="brand" href="/" aria-label="Zum Dashboard">
-      <img src="{{ url_for('static', path='brand/logo.png') }}" alt="">
-      <span><strong>Course Importer</strong><small>LearnHouse</small></span>
-    </a>
-    <nav>
-      <a class="nav-link" href="/">Übersicht</a>
-      <span class="nav-link is-disabled">Importe <small>Demnächst</small></span>
-      <span class="nav-link is-disabled">Verlauf <small>Demnächst</small></span>
-      <a class="nav-link is-active" href="/settings">Einstellungen</a>
-    </nav>
-    <form method="post" action="/logout" class="logout-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="button button-quiet" type="submit">Abmelden</button>
-    </form>
-  </aside>
+<div class="app-shell" data-page="settings">
+  {{ navigation('settings', csrf_token) }}
 
   <main class="dashboard narrow-content">
     <header class="page-header">

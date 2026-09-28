@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "_sidebar.html" import navigation with context %}
+{% block title %}Verlauf · LearnHouse Course Importer{% endblock %}
+{% block content %}
+<div class="app-shell" data-page="history" data-token-configured="{{ 'true' if connection_configured else 'false' }}">
+  {{ navigation('history', csrf_token) }}
+  <main class="dashboard">
+    <header class="page-header"><div><p class="eyebrow">VERLAUF</p><h1>Letzte Importe</h1><p class="lead">Importstatus prüfen und unterbrochene Vorgänge fortsetzen.</p></div></header>
+    <p class="live-message" id="liveMessage" role="status" aria-live="polite"></p>
+    <section class="panel history-panel" aria-labelledby="history-title"><div class="panel-heading"><div><p class="eyebrow">IMPORTJOBS</p><h2 id="history-title">Verlauf</h2></div></div><div class="table-wrap"><table><thead><tr><th>Zeitpunkt</th><th>Status</th><th>Fortschritt</th><th>Details</th><th></th></tr></thead><tbody id="historyRows"><tr><td colspan="5" class="table-empty">Lade Verlauf …</td></tr></tbody></table></div></section>
+  </main>
+</div>
+<script src="{{ url_for('static', path='app.js') }}"></script>
+{% endblock %}
