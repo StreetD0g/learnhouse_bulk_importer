@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector)
-const state = { courses: [], selected: null, activeJob: null }
+const state = { courses: [], selected: null, activeJob: null, targets: [] }
 
 function element(name, text, className = '') {
   const node = document.createElement(name)
@@ -122,20 +122,57 @@ function selectedFolders() {
   return [...document.querySelectorAll('.course-checkbox:checked')].map((checkbox) => checkbox.value)
 }
 
+function selectedTargetId() {
+  return $('#targetSelect')?.value || state.targets[0]?.id || ''
+}
+
+async function loadTargets() {
+  if (!tokenConfigured()) return
+  try {
+    const data = await request('/api/targets')
+    state.targets = data.targets || []
+    const select = $('#targetSelect')
+    select.replaceChildren()
+    for (const target of state.targets) {
+      const option = element('option', target.label)
+      option.value = target.id
+      option.dataset.org = `${target.org_slug} · ID ${target.org_id}`
+      select.append(option)
+    }
+    updateTargetDescription()
+    $('#targetSummary').textContent = state.targets.length > 1
+      ? `${state.targets.length} lokale Ziele verfügbar`
+      : state.targets.length === 1 ? `Ziel: ${state.targets[0].label}` : 'Kein Ziel konfiguriert'
+  } catch (error) { message(error.message, true) }
+}
+
+function updateTargetDescription() {
+  const target = state.targets.find((candidate) => candidate.id === selectedTargetId())
+  $('#targetDescription').textContent = target
+    ? `${target.org_slug} · Organisations-ID ${target.org_id}`
+    : 'Kein Ziel ausgewählt.'
+}
+
+function importPayload() {
+  return {
+    course_folders: selectedFolders(),
+    target_id: selectedTargetId(),
+    library_path: $('#libraryPath').value.trim(),
+    publish: $('#publishCourses').checked,
+    skip_duplicates: $('#skipDuplicates').checked,
+  }
+}
+
 async function beginImport() {
   if (!tokenConfigured()) { message('Hinterlege zuerst den API-Token in der lokalen Konfigurationsdatei.', true); return }
-  const folders = selectedFolders()
-  if (!folders.length) { message('Wähle mindestens einen Kurs aus.', true); return }
+  const payload = importPayload()
+  if (!payload.course_folders.length) { message('Wähle mindestens einen Kurs aus.', true); return }
+  if (!payload.target_id) { message('Kein LearnHouse-Ziel konfiguriert.', true); return }
   const button = $('#importSelected'); button.disabled = true
   try {
     const data = await request('/api/import', {
       method: 'POST',
-      body: JSON.stringify({
-        course_folders: folders,
-        library_path: $('#libraryPath').value.trim(),
-        publish: $('#publishCourses').checked,
-        skip_duplicates: $('#skipDuplicates').checked,
-      }),
+      body: JSON.stringify(payload),
     })
     state.activeJob = data.job_id
     $('#jobPanel').classList.remove('hidden')
@@ -143,6 +180,18 @@ async function beginImport() {
     await refreshJob(); await refreshHistory()
   } catch (error) { message(error.message, true) }
   finally { button.disabled = false }
+}
+
+function prepareImport() {
+  if (!tokenConfigured()) { message('Hinterlege zuerst den API-Token in der lokalen Konfigurationsdatei.', true); return }
+  const folders = selectedFolders()
+  if (!folders.length) { message('Wähle mindestens einen Kurs aus.', true); return }
+  if (!state.targets.length) { message('Kein LearnHouse-Ziel konfiguriert.', true); return }
+  if (state.targets.length === 1) { beginImport(); return }
+  $('#targetCourseCount').textContent = String(folders.length)
+  const dialog = $('#targetDialog')
+  if (typeof dialog.showModal === 'function') dialog.showModal()
+  else beginImport()
 }
 
 function statusClass(status) { return ['success', 'partial', 'failed', 'interrupted'].includes(status) ? status : '' }
@@ -193,12 +242,17 @@ async function refreshHistory() {
 }
 
 $('#scanButton').addEventListener('click', scan)
-$('#importSelected').addEventListener('click', beginImport)
+$('#importSelected').addEventListener('click', prepareImport)
 $('#selectAll').addEventListener('change', (event) => document.querySelectorAll('.course-checkbox').forEach((box) => { box.checked = event.target.checked }))
+$('#targetSelect').addEventListener('change', updateTargetDescription)
+$('#confirmImport').addEventListener('click', () => { $('#targetDialog').close(); beginImport() })
 $('#connectionTest').addEventListener('click', async () => {
   if (!tokenConfigured()) { message('Kein API-Token konfiguriert.', true); return }
-  try { const result = await request('/api/connection/test', { method: 'POST' }); message(`Verbindung erfolgreich: ${result.organization.slug}`) }
+  try {
+    const result = await request('/api/connection/test', { method: 'POST', body: JSON.stringify({ target_id: selectedTargetId() }) })
+    message(`Verbindung erfolgreich: ${result.organization.slug}`)
+  }
   catch (error) { message(error.message, true) }
 })
 
-scan(); refreshHistory()
+scan(); refreshHistory(); loadTargets()

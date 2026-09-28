@@ -57,6 +57,7 @@
           <label>Library-Zielordner <input id="libraryPath" type="text" placeholder="z. B. IT-Security / ISO & Compliance"></label>
           <label class="check-option"><input id="publishCourses" type="checkbox"> Nach erfolgreichem Import veröffentlichen</label>
           <label class="check-option"><input id="skipDuplicates" type="checkbox" checked> Doppelte Kurse überspringen</label>
+          <p class="target-summary" id="targetSummary">LearnHouse-Ziel wird geladen …</p>
         </div>
         <div class="table-wrap">
           <table>
@@ -85,5 +86,24 @@
     </section>
   </main>
 </div>
+
+<dialog class="target-dialog" id="targetDialog" aria-labelledby="target-dialog-title">
+  <form method="dialog" class="target-dialog-card">
+    <div class="dialog-heading">
+      <div><p class="eyebrow">IMPORTZIEL</p><h2 id="target-dialog-title">Zielorganisation festlegen</h2></div>
+      <button class="dialog-close" value="cancel" aria-label="Dialog schließen" type="submit">×</button>
+    </div>
+    <p>Die ausgewählten <strong id="targetCourseCount">0</strong> Kurse werden ausschließlich in diese LearnHouse-Organisation importiert.</p>
+    <label for="targetSelect">Zielorganisation</label>
+    <select id="targetSelect" name="target">
+      <option>Lade Ziele …</option>
+    </select>
+    <p class="target-description" id="targetDescription"></p>
+    <div class="dialog-actions">
+      <button class="button button-quiet" value="cancel" type="submit">Abbrechen</button>
+      <button class="button button-primary" id="confirmImport" type="button">Ziel bestätigen &amp; importieren</button>
+    </div>
+  </form>
+</dialog>
 <script src="{{ url_for('static', path='app.js') }}"></script>
 {% endblock %}

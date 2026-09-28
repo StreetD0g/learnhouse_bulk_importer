@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 import httpx
 
-from .config import Settings
+from .config import LearnHouseTarget, Settings
 
 
 class LearnHouseError(RuntimeError):
@@ -17,12 +17,22 @@ class LearnHouseError(RuntimeError):
 
 
 class LearnHouseClient:
-    def __init__(self, settings: Settings, *, transport: httpx.BaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        target: LearnHouseTarget | None = None,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
         base_url = settings.learnhouse_url.rstrip("/")
         self.api_url = base_url if base_url.endswith("/api/v1") else f"{base_url}/api/v1"
-        self.org_id = settings.learnhouse_org_id
-        self.org_slug = settings.learnhouse_org_slug
-        self._token = settings.get_api_token()
+        selected = target or next(iter(settings.learnhouse_targets()), None)
+        if not selected:
+            raise LearnHouseError("Kein LearnHouse-API-Token konfiguriert.")
+        self.org_id = selected.org_id
+        self.org_slug = selected.org_slug
+        self.org_label = selected.label
+        self._token = selected.token
         self._http = httpx.Client(
             follow_redirects=True,
             timeout=httpx.Timeout(connect=30.0, read=21600.0, write=21600.0, pool=60.0),

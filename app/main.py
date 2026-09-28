@@ -49,9 +49,14 @@ app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 
 class ImportRequest(BaseModel):
     course_folders: list[str] = Field(min_length=1, max_length=200)
+    target_id: str = Field(min_length=1, max_length=30)
     library_path: str = Field(default="", max_length=500)
     publish: bool = False
     skip_duplicates: bool = True
+
+
+class ConnectionTestRequest(BaseModel):
+    target_id: str | None = Field(default=None, max_length=30)
 
 
 def authenticated(request: Request) -> bool:
@@ -69,6 +74,18 @@ def require_api_login(request: Request) -> None:
 
 def scan_courses() -> list[Any]:
     return scan_root(settings.import_root)
+
+
+def configured_target(target_id: str | None = None):
+    targets = settings.learnhouse_targets()
+    if not targets:
+        raise LearnHouseError("Kein LearnHouse-API-Token konfiguriert.")
+    if target_id is None and len(targets) == 1:
+        return targets[0]
+    target = next((candidate for candidate in targets if candidate.id == target_id), None)
+    if not target:
+        raise LearnHouseError("Das gewählte LearnHouse-Ziel ist nicht mehr konfiguriert.")
+    return target
 
 
 def dashboard_context(request: Request) -> dict[str, object]:
@@ -92,7 +109,11 @@ def dashboard_context(request: Request) -> dict[str, object]:
 
 def start_job(job_id: str) -> None:
     try:
-        with LearnHouseClient(settings) as client:
+        job = store.job(job_id)
+        if not job:
+            return
+        target = configured_target(job["payload"].get("target_id"))
+        with LearnHouseClient(settings, target=target) as client:
             ImportRunner(store, client, str(settings.import_root)).run(job_id)
     except LearnHouseError as error:
         store.update_job(job_id, status="failed", message=str(error), log_entry=f"FEHLER: {error}")
@@ -163,15 +184,23 @@ def api_scan(request: Request) -> dict[str, object]:
 
 
 @app.post("/api/connection/test", include_in_schema=False)
-def api_test_connection(request: Request) -> dict[str, object]:
+def api_test_connection(request: Request, body: ConnectionTestRequest | None = None) -> dict[str, object]:
     require_api_login(request)
-    if not settings.has_api_token():
-        raise HTTPException(status.HTTP_409_CONFLICT, "Kein API-Token konfiguriert")
     try:
-        with LearnHouseClient(settings) as client:
+        with LearnHouseClient(settings, target=configured_target(body.target_id if body else None)) as client:
             return client.test_connection()
     except LearnHouseError as error:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(error)) from error
+
+
+@app.get("/api/targets", include_in_schema=False)
+def api_targets(request: Request) -> dict[str, object]:
+    require_api_login(request)
+    targets = settings.learnhouse_targets()
+    return {
+        "targets": [target.public() for target in targets],
+        "selection_required": len(targets) > 1,
+    }
 
 
 @app.get("/api/courses/{folder_name}/thumbnail", include_in_schema=False)
@@ -201,8 +230,10 @@ def api_job(request: Request, job_id: str) -> dict[str, object]:
 @app.post("/api/import", include_in_schema=False)
 def api_import(request: Request, body: ImportRequest) -> dict[str, str]:
     require_api_login(request)
-    if not settings.has_api_token():
-        raise HTTPException(status.HTTP_409_CONFLICT, "Kein API-Token konfiguriert")
+    try:
+        configured_target(body.target_id)
+    except LearnHouseError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
     available = {course.folder_name: course for course in scan_courses()}
     missing = [folder for folder in body.course_folders if folder not in available]
     if missing:
