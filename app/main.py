@@ -112,4 +112,3 @@ def connection_settings(request: Request):
     if not authenticated(request):
         return redirect_to_login()
     return templates.TemplateResponse(request, "settings.html", dashboard_context(request))
-
