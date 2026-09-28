@@ -28,3 +28,19 @@ def test_store_marks_completed_source_cleanup_in_job_payload(tmp_path: Path) -> 
 
     assert store.job("job-1")["payload"]["source_cleanup_completed"] is True
     assert store.courses_for_job("job-1")[0]["source_path"] == "/imports/course"
+
+
+def test_successful_import_state_replaces_an_older_failed_attempt(tmp_path: Path) -> None:
+    store = ImportStore(tmp_path / "data" / "importer.sqlite3")
+    lesson = Lesson("Welcome", "/imports/course/01 Welcome.mp4", "01 Welcome.mp4", "video", 12)
+    course = Course("course", "/imports/course", "Course", "", "", "", False, None, [Chapter("Start", "01 Start", [lesson])], [])
+    store.create_job("failed-job", {"course_folders": ["course"]}, [course])
+    store.update_job("failed-job", status="partial", progress=100)
+    store.create_job("success-job", {"course_folders": ["course"]}, [course])
+    store.update_course("success-job", "course", status="success")
+    store.update_job("success-job", status="success", progress=100)
+
+    states = store.source_import_states(["/imports/course"])
+
+    assert states["/imports/course"]["label"] == "Importiert"
+    assert store.job_is_superseded("failed-job") is True

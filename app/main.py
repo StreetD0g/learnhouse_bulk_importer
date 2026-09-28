@@ -233,7 +233,14 @@ def history_page(request: Request):
 @app.get("/api/scan", include_in_schema=False)
 def api_scan(request: Request) -> dict[str, object]:
     require_api_login(request)
-    return {"courses": [course.to_dict() for course in scan_courses()]}
+    courses = scan_courses()
+    states = store.source_import_states([course.path for course in courses])
+    result = []
+    for course in courses:
+        item = course.to_dict()
+        item["import_state"] = states.get(course.path, {"status": "ready", "label": "Bereit"})
+        result.append(item)
+    return {"courses": result}
 
 
 @app.post("/api/connection/test", include_in_schema=False)
@@ -268,7 +275,13 @@ def api_thumbnail(request: Request, folder_name: str):
 @app.get("/api/jobs", include_in_schema=False)
 def api_jobs(request: Request) -> dict[str, object]:
     require_api_login(request)
-    return {"jobs": store.jobs()}
+    jobs = store.jobs()
+    for job in jobs:
+        job["superseded"] = store.job_is_superseded(job["id"])
+        job["can_resume"] = (
+            job["status"] in {"partial", "failed", "interrupted"} and not job["superseded"]
+        )
+    return {"jobs": jobs}
 
 
 @app.get("/api/jobs/{job_id}", include_in_schema=False)
@@ -308,6 +321,10 @@ def api_resume_job(request: Request, job_id: str) -> dict[str, str]:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Import nicht gefunden")
     if job["status"] == "running":
         raise HTTPException(status.HTTP_409_CONFLICT, "Import läuft bereits")
+    if job["status"] not in {"partial", "failed", "interrupted"}:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Dieser Import kann nicht fortgesetzt werden")
+    if store.job_is_superseded(job_id):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ein späterer erfolgreicher Import ersetzt diesen Versuch")
     store.update_job(job_id, status="queued", message="Wiederaufnahme wird vorbereitet", log_entry="Wiederaufnahme angefordert")
     executor.submit(start_job, job_id)
     return {"job_id": job_id}

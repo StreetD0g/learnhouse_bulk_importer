@@ -1,6 +1,6 @@
 const $ = (selector) => document.querySelector(selector)
 const shell = $('.app-shell')
-const state = { courses: [], activeJob: null, targets: [] }
+const state = { courses: [], activeJob: null, pendingFolders: [], targets: [] }
 
 function element(name, text, className = '') {
   const node = document.createElement(name)
@@ -26,7 +26,6 @@ async function request(url, options = {}) {
 
 function tokenConfigured() { return shell?.dataset.tokenConfigured === 'true' }
 function sourceCleanupEnabled() { return shell?.dataset.sourceCleanup === 'true' }
-function selectedFolders() { return [...document.querySelectorAll('.course-checkbox:checked')].map((checkbox) => checkbox.value) }
 function selectedTargetId() { return $('#targetSelect')?.value || state.targets[0]?.id || '' }
 function statusClass(status) { return ['success', 'partial', 'failed', 'interrupted'].includes(status) ? status : '' }
 
@@ -34,24 +33,27 @@ function renderCourses() {
   const body = $('#courseRows')
   body.replaceChildren()
   if (!state.courses.length) {
-    const row = element('tr'); const cell = element('td', 'Keine importierbaren Kursordner gefunden.', 'table-empty'); cell.colSpan = 7; row.append(cell); body.append(row); return
+    body.append(element('p', 'Keine importierbaren Kursordner gefunden.', 'table-empty')); return
   }
   for (const course of state.courses) {
-    const row = element('tr'); row.dataset.folder = course.folder_name
-    const selectCell = element('td'); const checkbox = document.createElement('input')
-    checkbox.type = 'checkbox'; checkbox.className = 'course-checkbox'; checkbox.value = course.folder_name; checkbox.setAttribute('aria-label', `${course.name} auswählen`)
-    selectCell.append(checkbox); row.append(selectCell)
-    const title = element('td'); const wrap = element('div', null, 'course-name')
+    const card = element('article', null, 'course-card'); card.dataset.folder = course.folder_name
+    const overview = element('div', null, 'course-card-overview')
+    const title = element('div', null, 'course-name')
     if (course.thumbnail) {
       const image = document.createElement('img'); image.className = 'course-thumb'; image.alt = ''; image.src = `/api/courses/${encodeURIComponent(course.folder_name)}/thumbnail`
-      image.onerror = () => image.replaceWith(element('span', '▧', 'course-thumb-placeholder')); wrap.append(image)
-    } else wrap.append(element('span', '▧', 'course-thumb-placeholder'))
-    wrap.append(element('span', course.name)); title.append(wrap)
-    row.append(title, element('td', course.chapter_count), element('td', course.lesson_count), element('td', course.size_human), element('td', course.library_path || '–'))
-    const status = element('span', course.skipped_count ? `${course.skipped_count} übersprungen` : 'Bereit', `status-badge${course.skipped_count ? ' partial' : ' success'}`)
-    const statusCell = element('td'); statusCell.append(status); row.append(statusCell); body.append(row)
-
-    const detailRow = element('tr', null, 'course-details-row'); const detailCell = element('td', null, 'course-details-cell'); detailCell.colSpan = 7
+      image.onerror = () => image.replaceWith(element('span', '▧', 'course-thumb-placeholder')); title.append(image)
+    } else title.append(element('span', '▧', 'course-thumb-placeholder'))
+    title.append(element('span', course.name)); overview.append(title)
+    const meta = element('div', null, 'course-meta')
+    meta.append(element('span', `${course.chapter_count} Kapitel`), element('span', `${course.lesson_count} Lektionen`), element('span', course.size_human))
+    if (course.library_path) meta.append(element('span', course.library_path))
+    overview.append(meta)
+    const importState = course.import_state || { status: 'ready', label: 'Bereit' }
+    const status = element('span', course.skipped_count ? `${course.skipped_count} Dateien ignoriert` : importState.label, `status-badge ${statusClass(course.skipped_count ? 'partial' : importState.status)}`)
+    const actions = element('div', null, 'course-card-actions'); actions.append(status)
+    const importButton = element('button', importState.status === 'success' ? 'Erneut importieren' : 'Importieren', 'button button-primary course-import-button')
+    importButton.type = 'button'; importButton.addEventListener('click', () => prepareImport([course.folder_name])); actions.append(importButton)
+    card.append(overview, actions)
     const detail = element('details', null, 'course-details'); detail.append(element('summary', `Kapitel anzeigen (${course.chapter_count})`))
     const chapters = element('div', null, 'chapter-list')
     for (const chapter of course.chapters) {
@@ -61,13 +63,13 @@ function renderCourses() {
       chapterNode.append(lessons); chapters.append(chapterNode)
     }
     if (course.skipped_count) chapters.append(element('p', `${course.skipped_count} Datei(en) werden übersprungen: ${course.skipped.join(', ')}`, 'course-skipped'))
-    detail.append(chapters); detailCell.append(detail); detailRow.append(detailCell); body.append(detailRow)
+    detail.append(chapters); card.append(detail); body.append(card)
   }
 }
 
-async function scan() {
+async function scan(quiet = false) {
   const button = $('#scanButton'); button.disabled = true
-  try { const data = await request('/api/scan'); state.courses = data.courses; renderCourses(); message(`${state.courses.length} Kursordner geprüft.`) }
+  try { const data = await request('/api/scan'); state.courses = data.courses; renderCourses(); if (!quiet) message(`${state.courses.length} Kursordner geprüft.`) }
   catch (error) { message(error.message, true) } finally { button.disabled = false }
 }
 
@@ -87,27 +89,27 @@ async function loadTargets() {
   } catch (error) { message(error.message, true) }
 }
 
-function importPayload() {
-  return { course_folders: selectedFolders(), target_id: selectedTargetId(), library_path: $('#libraryPath').value.trim(), publish: $('#publishCourses').checked, skip_duplicates: $('#skipDuplicates').checked }
+function importPayload(courseFolders) {
+  return { course_folders: courseFolders, target_id: selectedTargetId(), library_path: $('#libraryPath').value.trim(), publish: $('#publishCourses').checked, skip_duplicates: $('#skipDuplicates').checked }
 }
 
-async function beginImport() {
-  const payload = importPayload(); const button = $('#importSelected')
+async function beginImport(courseFolders = state.pendingFolders) {
+  const payload = importPayload(courseFolders)
   if (!payload.course_folders.length) { message('Wähle mindestens einen Kurs aus.', true); return }
   if (!payload.target_id) { message('Kein LearnHouse-Ziel konfiguriert.', true); return }
-  button.disabled = true
   try {
     const data = await request('/api/import', { method: 'POST', body: JSON.stringify(payload) })
     state.activeJob = data.job_id; $('#jobPanel').classList.remove('hidden'); message('Import wurde gestartet.'); await refreshJob()
-  } catch (error) { message(error.message, true) } finally { button.disabled = false }
+  } catch (error) { message(error.message, true) }
 }
 
-function prepareImport() {
+function prepareImport(courseFolders) {
   if (!tokenConfigured()) { message('Hinterlege zuerst den API-Token in der lokalen Konfigurationsdatei.', true); return }
-  if (!selectedFolders().length) { message('Wähle mindestens einen Kurs aus.', true); return }
+  if (!courseFolders?.length) { message('Kein Kurs ausgewählt.', true); return }
   if (!state.targets.length) { message('Kein LearnHouse-Ziel konfiguriert.', true); return }
-  if (state.targets.length === 1) { beginImport(); return }
-  $('#targetCourseCount').textContent = String(selectedFolders().length); $('#targetDialog').showModal()
+  state.pendingFolders = courseFolders
+  if (state.targets.length === 1) { beginImport(courseFolders); return }
+  $('#targetCourseCount').textContent = String(courseFolders.length); $('#targetDialog').showModal()
 }
 
 async function refreshJob() {
@@ -117,6 +119,7 @@ async function refreshJob() {
     $('#jobMessage').textContent = job.message; const badge = $('#jobStatus'); badge.textContent = job.status; badge.className = `status-badge ${statusClass(job.status)}`
     $('#progressBar').style.width = `${job.progress}%`; $('#progressValue').textContent = `${job.progress} %`; $('#jobLog').textContent = (job.log || []).join('\n')
     if (['queued', 'running'].includes(job.status)) setTimeout(refreshJob, 1200)
+    else scan(true)
   } catch (error) { message(error.message, true) }
 }
 
@@ -146,7 +149,8 @@ async function refreshHistory() {
       const status = element('td'); status.append(element('span', job.status, `status-badge ${statusClass(job.status)}`)); row.append(status)
       row.append(element('td', `${job.progress} %`), element('td', job.message || '–'))
       const action = element('td')
-      if (['partial', 'failed', 'interrupted'].includes(job.status)) { const button = element('button', 'Fortsetzen', 'resume-button'); button.type = 'button'; button.addEventListener('click', () => resume(job.id)); action.append(button) }
+      if (job.superseded) row.children[3].textContent = 'Durch erfolgreichen Folgeimport ersetzt'
+      if (job.can_resume) { const button = element('button', 'Fortsetzen', 'resume-button'); button.type = 'button'; button.addEventListener('click', () => resume(job.id)); action.append(button) }
       if (job.status === 'success' && sourceCleanupEnabled() && !job.payload?.source_cleanup_completed) {
         const button = element('button', 'Kursquelle löschen', 'delete-source-button'); button.type = 'button'; button.addEventListener('click', () => deleteSource(job)); action.append(button)
       }
@@ -156,8 +160,7 @@ async function refreshHistory() {
 }
 
 if (shell?.dataset.page === 'imports') {
-  $('#scanButton').addEventListener('click', scan); $('#importSelected').addEventListener('click', prepareImport)
-  $('#selectAll').addEventListener('change', (event) => document.querySelectorAll('.course-checkbox').forEach((box) => { box.checked = event.target.checked }))
+  $('#scanButton').addEventListener('click', () => scan())
   $('#targetSelect').addEventListener('change', updateTargetDescription)
   $('#confirmImport').addEventListener('click', () => { $('#targetDialog').close(); beginImport() })
   $('#connectionTest').addEventListener('click', async () => {

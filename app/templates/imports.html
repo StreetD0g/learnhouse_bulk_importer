@@ -12,9 +12,9 @@
     <p class="live-message" id="liveMessage" role="status" aria-live="polite"></p>
     <section class="workspace" aria-labelledby="courses-title">
       <div class="panel course-panel">
-        <div class="panel-heading"><div><p class="eyebrow">KURSQUELLE</p><h2 id="courses-title">Kurse</h2></div><div class="panel-actions"><button class="button button-quiet" id="scanButton" type="button">Ordner scannen</button><button class="button button-primary" id="importSelected" type="button">Ausgewählte importieren</button></div></div>
+        <div class="panel-heading"><div><p class="eyebrow">KURSQUELLE</p><h2 id="courses-title">Kurse</h2></div><div class="panel-actions"><button class="button button-quiet" id="scanButton" type="button">Ordner scannen</button></div></div>
         <div class="import-options"><label>Library-Zielordner <input id="libraryPath" type="text" placeholder="z. B. IT-Security / ISO & Compliance"></label><label class="check-option"><input id="publishCourses" type="checkbox"> Nach erfolgreichem Import veröffentlichen</label><label class="check-option"><input id="skipDuplicates" type="checkbox" checked> Doppelte Kurse überspringen</label><p class="target-summary" id="targetSummary">LearnHouse-Ziel wird geladen …</p></div>
-        <div class="table-wrap"><table><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Alle Kurse auswählen"></th><th>Kurs</th><th>Kapitel</th><th>Lektionen</th><th>Größe</th><th>Library</th><th>Status</th></tr></thead><tbody id="courseRows"><tr><td colspan="7" class="table-empty">Kursordner werden geladen …</td></tr></tbody></table></div>
+        <div class="course-list" id="courseRows" aria-live="polite"><p class="table-empty">Kursordner werden geladen …</p></div>
       </div>
     </section>
     <section class="panel job-panel hidden" id="jobPanel" aria-labelledby="job-title"><div class="panel-heading"><div><p class="eyebrow">IMPORTFORTSCHRITT</p><h2 id="job-title">Aktiver Import</h2><p id="jobMessage">Wird vorbereitet …</p></div><span class="status-badge" id="jobStatus">queued</span></div><div class="progress"><div id="progressBar"></div></div><p class="progress-value" id="progressValue">0 %</p><pre id="jobLog"></pre></section>

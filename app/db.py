@@ -173,6 +173,83 @@ class ImportStore:
             ).fetchall()
             return [self._row(row) for row in rows]
 
+    def source_import_states(self, source_paths: list[str]) -> dict[str, dict[str, object]]:
+        """Return the useful, user-facing state for each currently scanned source.
+
+        A source remains on disk after a successful import by design.  Therefore
+        the scanner must not present it as a new, merely "ready" course again.
+        A completed import takes precedence over older failed attempts for the
+        same exact source folder.
+        """
+        if not source_paths:
+            return {}
+        placeholders = ", ".join("?" for _ in source_paths)
+        with self._lock, self._connection() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT job_courses.source_path, job_courses.status AS course_status,
+                       jobs.status AS job_status, jobs.id AS job_id, jobs.created_at
+                FROM job_courses
+                JOIN jobs ON jobs.id = job_courses.job_id
+                WHERE job_courses.source_path IN ({placeholders})
+                ORDER BY jobs.created_at DESC, jobs.rowid DESC
+                """,
+                source_paths,
+            ).fetchall()
+
+        states: dict[str, dict[str, object]] = {}
+        for row in rows:
+            source_path = str(row["source_path"])
+            is_success = row["job_status"] == "success" and row["course_status"] == "success"
+            if is_success:
+                states[source_path] = {
+                    "status": "success",
+                    "label": "Importiert",
+                    "job_id": row["job_id"],
+                }
+                continue
+            # Do not overwrite a known successful import with an older attempt.
+            if source_path in states:
+                continue
+            if row["job_status"] in {"queued", "running"}:
+                states[source_path] = {"status": "running", "label": "Import läuft", "job_id": row["job_id"]}
+            elif row["job_status"] in {"partial", "failed", "interrupted"}:
+                states[source_path] = {"status": "partial", "label": "Import prüfen", "job_id": row["job_id"]}
+
+        return states
+
+    def job_is_superseded(self, job_id: str) -> bool:
+        """Whether all sources of a non-successful job later imported successfully."""
+        with self._lock, self._connection() as connection:
+            job = connection.execute("SELECT rowid, status, created_at FROM jobs WHERE id = ?", (job_id,)).fetchone()
+            if not job or job["status"] == "success":
+                return False
+            sources = connection.execute(
+                "SELECT source_path FROM job_courses WHERE job_id = ?", (job_id,)
+            ).fetchall()
+            if not sources:
+                return False
+            for source in sources:
+                successful = connection.execute(
+                    """
+                    SELECT 1
+                    FROM job_courses
+                    JOIN jobs AS successful_job ON successful_job.id = job_courses.job_id
+                    WHERE job_courses.source_path = ?
+                      AND successful_job.status = 'success'
+                      AND job_courses.status = 'success'
+                      AND (
+                        successful_job.created_at > ?
+                        OR (successful_job.created_at = ? AND successful_job.rowid > ?)
+                      )
+                    LIMIT 1
+                    """,
+                    (source["source_path"], job["created_at"], job["created_at"], job["rowid"]),
+                ).fetchone()
+                if not successful:
+                    return False
+            return True
+
     def courses_for_job(self, job_id: str) -> list[dict[str, Any]]:
         with self._lock, self._connection() as connection:
             rows = connection.execute(
