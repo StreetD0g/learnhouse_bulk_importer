@@ -27,6 +27,7 @@ class Settings:
     import_root: Path
     data_dir: Path
     import_workers: int
+    import_source_writable: bool = False
 
     def _token_values(self) -> dict[str, str]:
         """Read the local token file without ever exporting its contents."""
@@ -60,6 +61,7 @@ class Settings:
             import_root=Path(_value("IMPORT_ROOT", "/imports")),
             data_dir=Path(_value("DATA_DIR", "/data")),
             import_workers=max(1, int(_value("IMPORT_WORKERS", "1"))),
+            import_source_writable=_value("IMPORT_SOURCE_WRITABLE", "false").lower() in {"1", "true", "yes"},
         )
 
     def validation_errors(self) -> list[str]:

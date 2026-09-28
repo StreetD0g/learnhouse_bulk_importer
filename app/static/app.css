@@ -143,6 +143,7 @@ pre { max-height: 17rem; overflow: auto; padding: 1rem; color: #c9d9ec; border: 
 .hidden { display: none; }
 .history-panel { margin-top: 1rem; }
 .resume-button { min-height: 2rem; padding: .3rem .55rem; color: #d7e9ff; border: 1px solid #31618f; border-radius: .45rem; background: #102c4a; cursor: pointer; }
+.delete-source-button { min-height: 2rem; padding: .3rem .55rem; color: #ffd6d6; border: 1px solid #a64b4b; border-radius: .45rem; background: rgb(121 33 33 / 35%); cursor: pointer; }
 .target-dialog { width: min(calc(100% - 2rem), 42rem); padding: 0; color: var(--text); border: 1px solid #38516f; border-radius: 1rem; background: #101b2c; box-shadow: 0 2rem 6rem rgb(0 0 0 / 55%); }
 .target-dialog::backdrop { background: rgb(0 7 18 / 72%); backdrop-filter: blur(3px); }
 .target-dialog-card { padding: 1.75rem; }

@@ -24,3 +24,4 @@ Thumbs.db
 /data/
 /config/
 /docker-compose.local.yml
+/docker-compose.cleanup.yml

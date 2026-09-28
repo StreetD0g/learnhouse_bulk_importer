@@ -1,0 +1,8 @@
+# Optional: enables manual source deletion after a fully successful import.
+# Use only when ./imports is a disposable staging area with a backup.
+services:
+  importer:
+    environment:
+      IMPORT_SOURCE_WRITABLE: "true"
+    volumes:
+      - ./imports:/imports

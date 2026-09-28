@@ -173,6 +173,20 @@ class ImportStore:
             ).fetchall()
             return [self._row(row) for row in rows]
 
+    def courses_for_job(self, job_id: str) -> list[dict[str, Any]]:
+        with self._lock, self._connection() as connection:
+            rows = connection.execute(
+                "SELECT * FROM job_courses WHERE job_id = ? ORDER BY folder_name", (job_id,)
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def update_job_payload(self, job_id: str, payload: dict[str, Any]) -> None:
+        with self._lock, self._connection() as connection:
+            connection.execute(
+                "UPDATE jobs SET payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (json.dumps(payload), job_id),
+            )
+
     def course(self, job_id: str, folder_name: str) -> dict[str, Any] | None:
         with self._lock, self._connection() as connection:
             row = connection.execute(

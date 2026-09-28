@@ -2,7 +2,7 @@
 {% from "_sidebar.html" import navigation with context %}
 {% block title %}Verlauf · LearnHouse Course Importer{% endblock %}
 {% block content %}
-<div class="app-shell" data-page="history" data-token-configured="{{ 'true' if connection_configured else 'false' }}">
+<div class="app-shell" data-page="history" data-token-configured="{{ 'true' if connection_configured else 'false' }}" data-source-cleanup="{{ 'true' if source_cleanup_enabled else 'false' }}">
   {{ navigation('history', csrf_token) }}
   <main class="dashboard">
     <header class="page-header"><div><p class="eyebrow">VERLAUF</p><h1>Letzte Importe</h1><p class="lead">Importstatus prüfen und unterbrochene Vorgänge fortsetzen.</p></div></header>

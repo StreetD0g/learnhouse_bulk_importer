@@ -177,6 +177,28 @@ hochgeladene Lektionen werden dabei nicht erneut gesendet.
 Ein Import mit Dateifehlern wird als Teilimport markiert. Erfolgreich erstellte
 LearnHouse-Daten werden im MVP nicht automatisch gelöscht.
 
+## Lokale Kursquelle nach Erfolg löschen (optional)
+
+Die Kursquelle bleibt standardmäßig read-only. Das schützt Originaldateien und
+blendet die Löschaktion aus. Wenn `./imports` ausdrücklich nur ein
+wegwerfbarer Staging-Bereich mit eigener Sicherung ist, kann die Aktion gezielt
+aktiviert werden:
+
+1. `docker-compose.cleanup.yml.example` nach `docker-compose.cleanup.yml`
+   kopieren.
+2. Den Dienst mit beiden Dateien starten:
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.cleanup.yml up -d
+   ```
+
+Danach erscheint im Verlauf für einen vollständig erfolgreichen Job die Aktion
+**Kursquelle löschen**. Ein Bestätigungsdialog nennt die Anzahl der betroffenen
+Quellordner. Erst nach dieser Bestätigung werden ausschließlich die direkten,
+für diesen Job gespeicherten Kursordner unter `/imports` entfernt. Der
+LearnHouse-Kurs und seine hochgeladenen Inhalte bleiben unverändert. Teilimporte
+oder fehlgeschlagene Jobs können nie über diese Aktion gelöscht werden.
+
 ## Sicherheit
 
 - Der Importer verwendet eine eigene Login-Session und speichert keine Nutzer

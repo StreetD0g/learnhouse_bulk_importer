@@ -25,6 +25,7 @@ async function request(url, options = {}) {
 }
 
 function tokenConfigured() { return shell?.dataset.tokenConfigured === 'true' }
+function sourceCleanupEnabled() { return shell?.dataset.sourceCleanup === 'true' }
 function selectedFolders() { return [...document.querySelectorAll('.course-checkbox:checked')].map((checkbox) => checkbox.value) }
 function selectedTargetId() { return $('#targetSelect')?.value || state.targets[0]?.id || '' }
 function statusClass(status) { return ['success', 'partial', 'failed', 'interrupted'].includes(status) ? status : '' }
@@ -126,6 +127,16 @@ async function resume(jobId) {
   } catch (error) { message(error.message, true) }
 }
 
+async function deleteSource(job) {
+  const count = job.payload?.course_folders?.length || 0
+  if (!window.confirm(`Der Löschvorgang betrifft ${count} lokale Kursquelle(n) und ist unwiderruflich. Der bereits importierte LearnHouse-Kurs bleibt erhalten. Fortfahren?`)) return
+  try {
+    const result = await request(`/api/jobs/${encodeURIComponent(job.id)}/source`, { method: 'DELETE' })
+    message(`${result.deleted.length} lokale Kursquelle(n) gelöscht. LearnHouse bleibt unverändert.`)
+    await refreshHistory()
+  } catch (error) { message(error.message, true) }
+}
+
 async function refreshHistory() {
   try {
     const data = await request('/api/jobs'); const body = $('#historyRows'); body.replaceChildren()
@@ -136,6 +147,9 @@ async function refreshHistory() {
       row.append(element('td', `${job.progress} %`), element('td', job.message || '–'))
       const action = element('td')
       if (['partial', 'failed', 'interrupted'].includes(job.status)) { const button = element('button', 'Fortsetzen', 'resume-button'); button.type = 'button'; button.addEventListener('click', () => resume(job.id)); action.append(button) }
+      if (job.status === 'success' && sourceCleanupEnabled() && !job.payload?.source_cleanup_completed) {
+        const button = element('button', 'Kursquelle löschen', 'delete-source-button'); button.type = 'button'; button.addEventListener('click', () => deleteSource(job)); action.append(button)
+      }
       row.append(action); body.append(row)
     }
   } catch (error) { message(error.message, true) }

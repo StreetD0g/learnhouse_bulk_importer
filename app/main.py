@@ -4,6 +4,7 @@ import secrets
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
+from shutil import rmtree
 from typing import Any
 
 from fastapi import FastAPI, Form, HTTPException, Request, status
@@ -97,6 +98,7 @@ def dashboard_context(request: Request) -> dict[str, object]:
         "org_slug": settings.learnhouse_org_slug,
         "csrf_token": request.session["csrf_token"],
         "connection_configured": settings.has_api_token(),
+        "source_cleanup_enabled": settings.import_source_writable,
         "token_file": str(settings.learnhouse_token_file),
         "summary": {
             "ready": len(courses),
@@ -124,6 +126,43 @@ def start_job(job_id: str) -> None:
             message="Unerwarteter Importfehler. Details im Container-Log prüfen.",
             log_entry="FEHLER: Unerwarteter Importfehler",
         )
+
+
+def remove_successful_job_sources(job_id: str) -> list[str]:
+    """Delete only exact source folders recorded for one verified import job."""
+    if not settings.import_source_writable:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Quellordner ist schreibgeschützt. Aktiviere die optionale Cleanup-Compose-Datei.",
+        )
+    job = store.job(job_id)
+    if not job:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Import nicht gefunden")
+    if job["status"] != "success":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Nur vollständig erfolgreiche Importe können bereinigt werden")
+    if job["payload"].get("source_cleanup_completed"):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Quellordner wurde bereits bereinigt")
+
+    source_root = settings.import_root.resolve()
+    courses = store.courses_for_job(job_id)
+    sources = [Path(course["source_path"]).resolve() for course in courses]
+    if not sources:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Für diesen Import sind keine Quellordner hinterlegt")
+    if any(source.parent != source_root or not source.is_dir() for source in sources):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Quellordner ist nicht sicher löschbar oder nicht mehr vorhanden")
+
+    try:
+        for source in sources:
+            rmtree(source)
+    except OSError as error:
+        store.update_job(job_id, log_entry="FEHLER: Quellordner konnte nicht vollständig gelöscht werden")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Quellordner konnte nicht vollständig gelöscht werden") from error
+
+    payload = dict(job["payload"])
+    payload["source_cleanup_completed"] = True
+    store.update_job_payload(job_id, payload)
+    store.update_job(job_id, log_entry=f"QUELLE GELÖSCHT: {len(sources)} Kursordner")
+    return [source.name for source in sources]
 
 
 @app.get("/healthz", include_in_schema=False)
@@ -272,3 +311,9 @@ def api_resume_job(request: Request, job_id: str) -> dict[str, str]:
     store.update_job(job_id, status="queued", message="Wiederaufnahme wird vorbereitet", log_entry="Wiederaufnahme angefordert")
     executor.submit(start_job, job_id)
     return {"job_id": job_id}
+
+
+@app.delete("/api/jobs/{job_id}/source", include_in_schema=False)
+def api_delete_job_source(request: Request, job_id: str) -> dict[str, object]:
+    require_api_login(request)
+    return {"deleted": remove_successful_job_sources(job_id)}
