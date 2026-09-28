@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+_vorarbeit
+imports
+data
+config
+__pycache__
+*.py[cod]
+.pytest_cache
+.venv
+venv

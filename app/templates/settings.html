@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Einstellungen · LearnHouse Course Importer{% endblock %}
+{% block content %}
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Hauptnavigation">
+    <a class="brand" href="/" aria-label="Zum Dashboard">
+      <img src="{{ url_for('static', path='brand/logo.png') }}" alt="">
+      <span><strong>Course Importer</strong><small>LearnHouse</small></span>
+    </a>
+    <nav>
+      <a class="nav-link" href="/">Übersicht</a>
+      <span class="nav-link is-disabled">Importe <small>Demnächst</small></span>
+      <span class="nav-link is-disabled">Verlauf <small>Demnächst</small></span>
+      <a class="nav-link is-active" href="/settings">Einstellungen</a>
+    </nav>
+    <form method="post" action="/logout" class="logout-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button button-quiet" type="submit">Abmelden</button>
+    </form>
+  </aside>
+
+  <main class="dashboard narrow-content">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">KONFIGURATION</p>
+        <h1>LearnHouse-Verbindung</h1>
+        <p class="lead">Die Verbindungsdaten werden serverseitig verwaltet und nicht an den Browser ausgeliefert.</p>
+      </div>
+    </header>
+
+    <section class="panel settings-panel">
+      <h2>API-Token</h2>
+      {% if connection_configured %}
+      <p class="notice notice-success">Ein API-Token ist in der lokalen Konfigurationsdatei vorhanden.</p>
+      {% else %}
+      <p class="notice notice-warning">Noch kein API-Token hinterlegt. Imports bleiben gesperrt, bis ein Wert eingetragen wurde.</p>
+      {% endif %}
+      <p>Der Container legt beim ersten Start die Datei <code>{{ token_file }}</code> an. Ergänze dort lokal den Wert hinter <code>LEARNHOUSE_API_TOKEN=</code>. Der Token wird weder in der Datenbank noch in der Browser-Session gespeichert.</p>
+      <p>Nach dem Speichern der Datei genügt ein Neuladen dieser Seite. Eine Validierung des Tokens findet erst beim Verbindungs-Test beziehungsweise Import statt.</p>
+    </section>
+
+    <section class="panel settings-panel">
+      <h2>Feste Verbindungswerte</h2>
+      <dl class="config-summary">
+        <div><dt>Server</dt><dd>{{ learnhouse_url }}</dd></div>
+        <div><dt>Organisation</dt><dd>{{ org_slug }} · ID {{ org_id }}</dd></div>
+      </dl>
+    </section>
+  </main>
+</div>
+{% endblock %}

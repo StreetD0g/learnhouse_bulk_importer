@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Anmelden · LearnHouse Course Importer{% endblock %}
+{% block content %}
+<main class="login-shell">
+  <section class="login-card" aria-labelledby="login-title">
+    <img class="login-logo" src="{{ url_for('static', path='brand/logo.png') }}" alt="LearnHouse Course Importer">
+    <p class="eyebrow">ADMIN-BEREICH</p>
+    <h1 id="login-title">Course Importer</h1>
+    <p class="lead">Sicherer Zugang zum LearnHouse-Import.</p>
+    <form method="post" action="/login" class="login-form">
+      <label for="username">Benutzername</label>
+      <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+      <label for="password">Passwort</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+      <button class="button button-primary" type="submit">Anmelden</button>
+    </form>
+    <p class="login-note">Der Zugang wird vom Betreiber dieser Installation verwaltet.</p>
+  </section>
+</main>
+{% endblock %}

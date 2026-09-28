@@ -18,3 +18,8 @@ venv/
 Thumbs.db
 .idea/
 .vscode/
+
+# Locally mounted course material and application state
+/imports/
+/data/
+/config/

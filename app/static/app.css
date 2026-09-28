@@ -1,0 +1,91 @@
+:root {
+  color-scheme: dark;
+  --bg: #091321;
+  --surface: #101f33;
+  --line: #274361;
+  --text: #edf5ff;
+  --muted: #9eb0c9;
+  --blue: #1682ff;
+  --blue-strong: #0871ed;
+  --green: #35e3a0;
+  --amber: #ffc14d;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { min-width: 320px; margin: 0; color: var(--text); background: radial-gradient(circle at top left, #17365a 0, var(--bg) 38rem); }
+a { color: inherit; }
+button, input { font: inherit; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #7ab8ff; outline-offset: 3px; }
+code { overflow-wrap: anywhere; color: #a7d2ff; }
+
+.login-shell { display: grid; min-height: 100dvh; place-items: center; padding: 2rem; }
+.login-card { width: min(100%, 28rem); padding: 2.5rem; border: 1px solid var(--line); border-radius: 1.25rem; background: linear-gradient(145deg, rgb(20 38 61 / 96%), rgb(10 22 37 / 98%)); box-shadow: 0 1.5rem 5rem rgb(0 0 0 / 25%); }
+.login-logo { display: block; width: 4rem; height: 4rem; margin: 0 0 1.5rem; object-fit: contain; }
+.eyebrow { margin: 0 0 .45rem; color: #84b8f4; font-size: .75rem; font-weight: 700; letter-spacing: .12em; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: .45rem; font-size: clamp(1.75rem, 4vw, 2.5rem); letter-spacing: -.04em; }
+h2 { font-size: 1.3rem; }
+.lead, .login-note { color: var(--muted); line-height: 1.55; }
+.login-form { display: grid; gap: .55rem; margin-top: 2rem; }
+.login-form label { margin-top: .6rem; color: #ccdbed; font-size: .9rem; font-weight: 600; }
+input { width: 100%; padding: .78rem .9rem; color: var(--text); background: #0a1727; border: 1px solid #395573; border-radius: .65rem; }
+.button { min-height: 2.8rem; padding: .65rem 1rem; border: 1px solid transparent; border-radius: .65rem; cursor: pointer; font-weight: 700; }
+.button-primary { margin-top: 1rem; color: white; background: linear-gradient(135deg, var(--blue), var(--blue-strong)); box-shadow: 0 .65rem 1.5rem rgb(8 113 237 / 25%); }
+.button-primary:disabled { cursor: not-allowed; opacity: .52; }
+.button-quiet { width: 100%; color: #c8d7e9; background: transparent; border-color: var(--line); }
+.form-error { margin: .85rem 0 0; padding: .7rem; color: #ffd6d6; border-left: 3px solid #ff6868; background: rgb(121 33 33 / 35%); border-radius: .3rem; }
+.login-note { margin: 1.75rem 0 0; font-size: .82rem; text-align: center; }
+
+.app-shell { display: grid; min-height: 100dvh; grid-template-columns: 16.5rem minmax(0, 1fr); }
+.sidebar { display: flex; flex-direction: column; gap: 2rem; padding: 1.5rem; border-right: 1px solid var(--line); background: rgb(7 18 31 / 76%); }
+.brand { display: flex; gap: .8rem; align-items: center; text-decoration: none; }
+.brand img { width: 2.7rem; height: 2.7rem; object-fit: contain; }
+.brand span { display: grid; gap: .15rem; }
+.brand small, .nav-link small { color: var(--muted); font-size: .72rem; }
+nav { display: grid; gap: .35rem; }
+.nav-link { padding: .75rem .85rem; border-radius: .6rem; text-decoration: none; }
+.nav-link.is-active { background: #0d66cf; box-shadow: inset 0 0 0 1px #3ca0ff; }
+.nav-link.is-disabled { display: flex; justify-content: space-between; color: #b6c7db; opacity: .62; }
+.logout-form { margin-top: auto; }
+.dashboard { width: min(100%, 92rem); margin: 0 auto; padding: clamp(1.5rem, 4vw, 3.5rem); }
+.narrow-content { max-width: 62rem; margin-left: 0; }
+.page-header { display: flex; justify-content: space-between; gap: 1rem; align-items: start; margin-bottom: 2rem; }
+.connection-state { display: flex; gap: .5rem; align-items: center; padding: .55rem .75rem; color: #b7f7dc; background: rgb(6 87 62 / 34%); border: 1px solid #176b56; border-radius: 999px; font-size: .85rem; white-space: nowrap; }
+.connection-state span { width: .55rem; height: .55rem; background: var(--green); border-radius: 50%; }
+.connection-state.is-warning { color: #ffe0a1; background: rgb(111 71 10 / 34%); border-color: #93661b; }
+.connection-state.is-warning span { background: var(--amber); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.stats article, .panel { border: 1px solid var(--line); border-radius: 1rem; background: linear-gradient(145deg, rgb(20 38 61 / 96%), rgb(11 26 43 / 96%)); }
+.stats article { padding: 1.2rem; }
+.stats p, .stats small { color: var(--muted); }
+.stats p { margin-bottom: .4rem; font-size: .88rem; }
+.stats strong { display: block; margin-bottom: .4rem; font-size: 2rem; }
+.empty-state { display: flex; justify-content: space-between; gap: 2rem; align-items: center; padding: 2rem; }
+.empty-state > div { max-width: 43rem; }
+.settings-panel { padding: 1.75rem; margin-bottom: 1rem; }
+.settings-panel p { line-height: 1.6; color: var(--muted); }
+.notice { padding: .85rem 1rem; border-radius: .65rem; }
+.notice-success { color: #c9f9df !important; background: rgb(6 87 62 / 34%); border: 1px solid #176b56; }
+.notice-warning { color: #ffe0a1 !important; background: rgb(111 71 10 / 34%); border: 1px solid #93661b; }
+.config-summary { display: flex; flex-wrap: wrap; gap: 1rem 2.5rem; margin: 1.5rem 0 0; }
+.config-summary div { display: grid; gap: .2rem; }
+.config-summary dt { color: var(--muted); font-size: .8rem; }
+.config-summary dd { margin: 0; font-weight: 600; }
+
+@media (max-width: 880px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; border-right: 0; border-bottom: 1px solid var(--line); }
+  .sidebar nav { display: flex; flex: 1; overflow-x: auto; }
+  .nav-link { white-space: nowrap; }
+  .logout-form { margin-top: 0; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .login-shell { padding: 1rem; }
+  .login-card { padding: 1.5rem; }
+  .sidebar { gap: 1rem; padding: 1rem; }
+  .brand small, .nav-link small { display: none; }
+  .stats { grid-template-columns: 1fr; }
+  .page-header, .empty-state { align-items: stretch; flex-direction: column; }
+}

@@ -1,0 +1,45 @@
+name: learnhouse-course-importer
+
+services:
+  importer:
+    build: .
+    container_name: learnhouse-course-importer
+    restart: unless-stopped
+    ports:
+      - "8099:8000"
+
+    # Betreiber tragen diese Werte direkt hier oder in der ZimaOS/CasaOS-UI ein.
+    # Die Platzhalter verhindern einen Start, bis sie ersetzt wurden.
+    environment:
+      IMPORT_ROOT: "/imports"
+      DATA_DIR: "/data"
+      IMPORTER_USER: "admin"
+      IMPORTER_PASSWORD: "CHANGE_ME_TO_A_LONG_UNIQUE_PASSWORD"
+      SESSION_SECRET: "CHANGE_ME_TO_A_LONG_RANDOM_SESSION_SECRET"
+      COOKIE_SECURE: "false"
+      LEARNHOUSE_URL: "http://learnhouse"
+      LEARNHOUSE_ORG_ID: "1"
+      LEARNHOUSE_ORG_SLUG: "default"
+      LEARNHOUSE_TOKEN_FILE: "/config/learnhouse-importer.env"
+      IMPORT_WORKERS: "1"
+
+    volumes:
+      - ./imports:/imports:ro
+      - importer_data:/data
+      # Beim ersten Start erstellt der Container hier eine leere Token-Datei.
+      - ./config:/config
+
+    networks:
+      - learnhouse
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+networks:
+  learnhouse:
+    external: true
+
+volumes:
+  importer_data:
