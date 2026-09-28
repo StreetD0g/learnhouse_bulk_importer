@@ -17,7 +17,7 @@ class LearnHouseError(RuntimeError):
 
 
 class LearnHouseClient:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, *, transport: httpx.BaseTransport | None = None) -> None:
         base_url = settings.learnhouse_url.rstrip("/")
         self.api_url = base_url if base_url.endswith("/api/v1") else f"{base_url}/api/v1"
         self.org_id = settings.learnhouse_org_id
@@ -26,6 +26,7 @@ class LearnHouseClient:
         self._http = httpx.Client(
             follow_redirects=True,
             timeout=httpx.Timeout(connect=30.0, read=21600.0, write=21600.0, pool=60.0),
+            transport=transport,
         )
 
     def __enter__(self) -> "LearnHouseClient":
