@@ -1,0 +1,20 @@
+# Local preparation material and secrets
+/_vorarbeit/
+.env
+.env.*
+!.env.example
+
+# Python runtime and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local application data and editor files
+*.db
+*.sqlite3
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
