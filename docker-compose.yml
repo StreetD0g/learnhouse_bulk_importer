@@ -20,8 +20,8 @@ services:
       # Standard: öffentliche HTTPS-Adresse. Für eine direkte lokale Docker-
       # Verbindung siehe docker-compose.local.yml.example.
       LEARNHOUSE_URL: "https://learn.example.com"
-      # Rückfallwerte für ein einzelnes Token. Bei mehreren Zielen stehen ID
-      # und Slug nummeriert in ./config/learnhouse-importer.env.
+      # Rückfallwerte für ein einzelnes Token. Bei mehreren Zielen stehen URL,
+      # ID und Slug nummeriert in ./config/learnhouse-importer.env.
       LEARNHOUSE_ORG_ID: "1"
       LEARNHOUSE_ORG_SLUG: "default"
       LEARNHOUSE_TOKEN_FILE: "/config/learnhouse-importer.env"

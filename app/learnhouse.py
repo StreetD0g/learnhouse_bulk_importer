@@ -24,11 +24,11 @@ class LearnHouseClient:
         target: LearnHouseTarget | None = None,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        base_url = settings.learnhouse_url.rstrip("/")
-        self.api_url = base_url if base_url.endswith("/api/v1") else f"{base_url}/api/v1"
         selected = target or next(iter(settings.learnhouse_targets()), None)
         if not selected:
             raise LearnHouseError("Kein LearnHouse-API-Token konfiguriert.")
+        base_url = selected.url.rstrip("/")
+        self.api_url = base_url if base_url.endswith("/api/v1") else f"{base_url}/api/v1"
         self.org_id = selected.org_id
         self.org_slug = selected.org_slug
         self.org_label = selected.label

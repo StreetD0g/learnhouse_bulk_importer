@@ -81,6 +81,7 @@ class Settings:
                     "# Ein Ziel: Token, sichtbarer Name sowie ID und Slug der Organisation.\n"
                     "LEARNHOUSE_TOKEN_1=\n"
                     "LEARNHOUSE_ORG_1=\n"
+                    "LEARNHOUSE_URL_1=\n"
                     "LEARNHOUSE_ORG_ID_1=\n"
                     "LEARNHOUSE_ORG_SLUG_1=\n"
                     "# Weitere Ziele bei Bedarf fortlaufend nummerieren, z. B. _2.\n"
@@ -116,17 +117,21 @@ class Settings:
         targets: list[LearnHouseTarget] = []
         for number in numbered:
             token = values[f"LEARNHOUSE_TOKEN_{number}"]
+            url = values.get(f"LEARNHOUSE_URL_{number}") or self.learnhouse_url
             org_id = values.get(f"LEARNHOUSE_ORG_ID_{number}") or self.learnhouse_org_id
             org_slug = values.get(f"LEARNHOUSE_ORG_SLUG_{number}") or self.learnhouse_org_slug
             label = values.get(f"LEARNHOUSE_ORG_{number}") or f"Token {number}"
-            targets.append(LearnHouseTarget(str(number), token, label, org_id, org_slug))
+            targets.append(LearnHouseTarget(str(number), token, label, url, org_id, org_slug))
 
         # Existing installations retain their one-token configuration unchanged.
         legacy_token = values.get("LEARNHOUSE_API_TOKEN", "")
         if legacy_token and not targets:
             label = values.get("LEARNHOUSE_ORG", "") or "Token 1"
             targets.append(
-                LearnHouseTarget("legacy", legacy_token, label, self.learnhouse_org_id, self.learnhouse_org_slug)
+                LearnHouseTarget(
+                    "legacy", legacy_token, label, self.learnhouse_url,
+                    self.learnhouse_org_id, self.learnhouse_org_slug,
+                )
             )
         return targets
 
@@ -138,11 +143,18 @@ class LearnHouseTarget:
     id: str
     token: str
     label: str
+    url: str
     org_id: str
     org_slug: str
 
     def public(self) -> dict[str, str]:
-        return {"id": self.id, "label": self.label, "org_id": self.org_id, "org_slug": self.org_slug}
+        return {
+            "id": self.id,
+            "label": self.label,
+            "url": self.url,
+            "org_id": self.org_id,
+            "org_slug": self.org_slug,
+        }
 
 
 settings = Settings.from_environment()

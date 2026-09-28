@@ -3,7 +3,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from app.config import Settings
+from app.config import LearnHouseTarget, Settings
 from app.learnhouse import LearnHouseClient, LearnHouseError
 
 
@@ -43,3 +43,24 @@ def test_api_error_redacts_token(tmp_path: Path) -> None:
 
     assert "lh_test_token" not in str(error.value)
     assert "[REDACTED]" in str(error.value)
+
+
+def test_selected_target_controls_server_and_organization(tmp_path: Path) -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=[])
+
+    target = LearnHouseTarget(
+        "2", "lh_other_token", "Andere Plattform", "https://other.learnhouse.example", "7", "other-org"
+    )
+    with LearnHouseClient(
+        settings(tmp_path / "token.env"), target=target, transport=httpx.MockTransport(handler)
+    ) as client:
+        result = client.test_connection()
+
+    assert result["server"] == "https://other.learnhouse.example"
+    assert all(request.url.host == "other.learnhouse.example" for request in requests)
+    assert any("/courses/org_slug/other-org/" in str(request.url) for request in requests)
+    assert any("/folders/org/7/" in str(request.url) for request in requests)

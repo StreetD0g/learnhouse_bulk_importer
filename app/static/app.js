@@ -136,7 +136,7 @@ async function loadTargets() {
     for (const target of state.targets) {
       const option = element('option', target.label)
       option.value = target.id
-      option.dataset.org = `${target.org_slug} · ID ${target.org_id}`
+      option.dataset.org = `${target.url} · ${target.org_slug} · ID ${target.org_id}`
       select.append(option)
     }
     updateTargetDescription()
@@ -149,7 +149,7 @@ async function loadTargets() {
 function updateTargetDescription() {
   const target = state.targets.find((candidate) => candidate.id === selectedTargetId())
   $('#targetDescription').textContent = target
-    ? `${target.org_slug} · Organisations-ID ${target.org_id}`
+    ? `${target.url} · ${target.org_slug} · Organisations-ID ${target.org_id}`
     : 'Kein Ziel ausgewählt.'
 }
 

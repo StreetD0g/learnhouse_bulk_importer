@@ -36,12 +36,12 @@
       <p class="notice notice-warning">Noch kein API-Token hinterlegt. Imports bleiben gesperrt, bis ein Wert eingetragen wurde.</p>
       {% endif %}
       <p>Der Container legt beim ersten Start die Datei <code>{{ token_file }}</code> an. Ergänze dort lokal <code>LEARNHOUSE_TOKEN_1=</code>; ein sichtbarer Zielname ist optional über <code>LEARNHOUSE_ORG_1=</code> möglich. Für weitere Ziele werden die Werte mit <code>_2</code>, <code>_3</code> und so weiter fortgeführt.</p>
-      <p>Für ein abweichendes Ziel ergänze außerdem <code>LEARNHOUSE_ORG_ID_2=</code> und <code>LEARNHOUSE_ORG_SLUG_2=</code>. Bei mehreren Tokens wird das Ziel vor jedem Import ausgewählt und bestätigt. Der Token wird weder in der Datenbank noch in der Browser-Session gespeichert.</p>
+      <p>Für eine weitere Plattform ergänze außerdem <code>LEARNHOUSE_URL_2=</code>, <code>LEARNHOUSE_ORG_ID_2=</code> und <code>LEARNHOUSE_ORG_SLUG_2=</code>. Bei mehreren Tokens wird das Ziel vor jedem Import ausgewählt und bestätigt. Der Token wird weder in der Datenbank noch in der Browser-Session gespeichert.</p>
       <p>Nach dem Speichern der Datei genügt ein Neuladen dieser Seite. Eine Validierung des Tokens findet erst beim Verbindungs-Test beziehungsweise Import statt.</p>
     </section>
 
     <section class="panel settings-panel">
-      <h2>Server und Rückfallziel</h2>
+      <h2>Rückfall für ein einzelnes Ziel</h2>
       <dl class="config-summary">
         <div><dt>Server</dt><dd>{{ learnhouse_url }}</dd></div>
         <div><dt>Organisation für ein einzelnes Ziel</dt><dd>{{ org_slug }} · ID {{ org_id }}</dd></div>
