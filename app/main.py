@@ -22,6 +22,17 @@ from .scanner import scan_root
 
 APP_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=APP_DIR / "templates")
+
+
+def asset_version(path: str) -> int:
+    """Make browser caches fetch a changed static asset after each deployment."""
+    try:
+        return (APP_DIR / "static" / path).stat().st_mtime_ns
+    except OSError:
+        return 0
+
+
+templates.env.globals["asset_version"] = asset_version
 store = ImportStore(settings.data_dir / "importer.sqlite3")
 executor = ThreadPoolExecutor(max_workers=settings.import_workers, thread_name_prefix="course-import")
 
