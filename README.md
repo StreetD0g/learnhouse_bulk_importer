@@ -1,224 +1,98 @@
 # LearnHouse Course Importer
 
 > [!WARNING]
-> **Vibe-coded und experimentell:** Dieses Projekt wurde mit KI-Unterstützung
-> entwickelt und befindet sich im frühen Release-Candidate-Stadium. Bitte vor
-> jedem Import eine Sicherung der Kursquelle anlegen, Imports zunächst mit
-> Testdaten prüfen und den Code vor einem produktiven Einsatz selbst bewerten.
-> Nutzung erfolgt auf eigene Verantwortung.
+> **AI-assisted and experimental.** This project is an early-stage importer
+> built with substantial AI assistance. Back up every course source, test with
+> non-critical data first, and review the code before using it in production.
+> Use it at your own risk.
 
-Ein self-hosted Bulk-Importer für lokale LearnHouse-Kursordner.
+A self-hosted bulk importer for local LearnHouse course folders. It scans a
+mounted source directory and creates courses, chapters, and learning
+activities through the LearnHouse REST API.
 
-> Dieses Projekt ist nicht mit LearnHouse verbunden oder von LearnHouse unterstützt.
+> This project is not affiliated with, endorsed by, or supported by LearnHouse.
 
-## Status
+## Highlights
 
-**v0.1 Release Candidate.** Der Importer ist für lokale Kursordner und eine
-manuell konfigurierte LearnHouse-API-Verbindung ausgelegt. Er ist kein
-offizielles LearnHouse-Produkt und noch nicht als vollständig abgesicherte
-Produktivsoftware zu verstehen.
+- Imports `.mp4`, `.webm`, and `.pdf` files from local course folders
+- Creates courses, chapters, and nested LearnHouse library folders
+- Shows a preview before importing and marks unsupported files visibly
+- Supports one or more local LearnHouse API targets
+- Persists import progress and can resume interrupted jobs
+- Keeps API tokens out of Compose, the database, and the browser
+- Can optionally remove a verified staging source after explicit confirmation
 
-## Funktionsumfang des MVP
+Currently out of scope: subtitles, audio-only files, Office files, SCORM,
+direct LearnHouse database access, and direct writes to LearnHouse content
+storage.
 
-- Scan lokaler Kursordner mit Vorschau von Kapiteln, Lektionen und übersprungenen Dateien
-- Import von `.mp4`, `.webm` und `.pdf` über die LearnHouse-API
-- Erstellen von Kursen, Kapiteln und verschachtelten Library-Ordnern
-- Optionales Veröffentlichen erst nach vollständigem Kursimport
-- Persistenter Importverlauf und Wiederaufnahme nach Container-Neustart
-- Ein eigener, Compose-konfigurierter Zugang zum Importer-Webinterface
+## Quick start
 
-Nicht unterstützt werden aktuell Untertitel, Office-Dateien, Audio, SCORM und
-direkter Zugriff auf die LearnHouse-Datenbank oder deren Content-Verzeichnis.
+1. Clone the repository and open [`docker-compose.yml`](docker-compose.yml).
+2. Replace `IMPORTER_PASSWORD` and `SESSION_SECRET` with strong, unique values.
+3. Set the fallback `LEARNHOUSE_URL`, `LEARNHOUSE_ORG_ID`, and
+   `LEARNHOUSE_ORG_SLUG` for a single target.
+4. Start the importer:
 
-## Schnellstart
+   ```bash
+   docker compose up -d --build
+   ```
 
-1. Bearbeite die Platzhalter für `IMPORTER_PASSWORD` und `SESSION_SECRET` in
-   [`docker-compose.yml`](docker-compose.yml).
-2. Setze `LEARNHOUSE_URL` passend zur LearnHouse-Instanz. Sie ist der Rückfall
-   für ein einzelnes Ziel; bei mehreren Plattformen wird die Server-URL je
-   Ziel in der lokalen Token-Datei hinterlegt.
-3. Starte den Dienst mit `docker compose up -d --build`.
-4. Ergänze den API-Token in der automatisch angelegten Datei
+5. Add a LearnHouse API token to the newly created local file
    `config/learnhouse-importer.env`.
-5. Öffne `http://HOST:8099`, melde dich an und teste die Verbindung.
+6. Open `http://HOST:8099`, sign in, test the connection, and scan the
+   `imports/` folder.
 
-Der Importer startet absichtlich nicht mit unveränderten Passwort- oder
-Session-Schlüssel-Platzhaltern.
+The container deliberately refuses to start while the default password or
+session-secret placeholders are still present.
 
-## Kursstruktur
+For the complete walkthrough, see the [installation guide](docs/installation.md).
+
+## Course folder at a glance
 
 ```text
 imports/
 └── Example course/
-    ├── course.json                 # optional
-    ├── thumbnail.png               # optional
-    ├── 01 Start und Orientierung/
-    │   ├── 001 Willkommen.mp4
-    │   └── 002 Kursaufbau.mp4
-    └── 02 Grundlagen/
-        ├── 001 Informationssicherheit.webm
+    ├── course.json                 # optional metadata
+    ├── thumbnail.png               # optional thumbnail
+    ├── 01 Getting started/
+    │   ├── 001 Welcome.mp4
+    │   └── 002 Course overview.mp4
+    └── 02 Fundamentals/
+        ├── 001 Introduction.webm
         └── 002 Handout.pdf
 ```
 
-Der oberste Ordner wird zu einem LearnHouse-Kurs, jeder direkte Unterordner zu
-einem Kapitel. Nummerierungspräfixe wie `01`, `01 -`, `001` und `001.` werden
-aus sichtbaren Titeln entfernt, bestimmen aber weiter die natürliche Sortierung.
+The top-level folder becomes a LearnHouse course. Each direct subfolder becomes
+a chapter. Numeric prefixes such as `01`, `01 -`, `001`, and `001.` control the
+natural sort order but are removed from visible titles.
 
-`course.json` kann die Metadaten überschreiben:
+See [course folder layout](docs/course-layout.md) for `course.json` metadata
+and supported formats.
 
-```json
-{
-  "name": "Example course",
-  "description": "A practical guide for internal processes",
-  "about": "Internal processes and audit readiness.",
-  "library_path": "Department/Topic",
-  "thumbnail": "thumbnail.png",
-  "publish": false
-}
-```
+## Security model
 
-## Verbindungsmodell: lokal oder extern
+- The importer has its own Compose-configured web login; it does not create a
+  user database.
+- LearnHouse tokens stay only in the local `config/` mount. They are never
+  stored in SQLite or returned to the browser.
+- The source folder is read-only by default. The optional cleanup mode is for a
+  disposable staging folder only; it never deletes anything in LearnHouse.
+- Local configuration, import sources, and `.env` files are ignored by Git and
+  excluded from the Docker build context.
 
-Der Importer kommuniziert serverseitig ausschließlich über die LearnHouse-REST-
-API. Daher müssen Importer und LearnHouse nicht auf demselben Docker-Host oder
-im selben Docker-Netzwerk laufen. Das macht den Betrieb auf einem separaten NAS
-oder einem Rechner des Uploaders möglich.
+## Documentation
 
-### Externes LearnHouse – Standard
+- [Installation and first import](docs/installation.md)
+- [LearnHouse targets: external and local Docker setups](docs/learnhouse-targets.md)
+- [Course folder layout and metadata](docs/course-layout.md)
+- [Optional staging-source cleanup](docs/source-cleanup.md)
 
-Die normale [`docker-compose.yml`](docker-compose.yml) benötigt kein
-`learnhouse`-Docker-Netzwerk. Trage die öffentliche HTTPS-Adresse ein:
+GitHub renders these Markdown guides directly in the repository. A GitHub Pages
+site is not needed unless a separate documentation website is wanted later.
 
-```yaml
-LEARNHOUSE_URL: "https://learn.example.com"
-```
+## Development and releases
 
-Das ist die empfohlene Variante, wenn die Kursdateien und LearnHouse auf
-unterschiedlichen Hosts liegen. Die Kommunikation läuft vom Importer-Container
-über HTTPS zum Reverse Proxy der LearnHouse-Instanz. CORS ist dabei nicht
-relevant, weil keine Browser-Anfrage an LearnHouse erfolgt.
-
-Der Reverse Proxy vor LearnHouse muss große, lang laufende Uploads zulassen. Bei
-Nginx betrifft das insbesondere `client_max_body_size` sowie die Proxy-
-Timeouts; ein vorgeschalteter CDN-, Tunnel- oder Proxy-Dienst darf keine
-niedrigeren Upload- oder Zeitlimits erzwingen. Für den vorgesehenen MVP sollten
-MP4/WebM bis 5 GB und PDFs bis 500 MB möglich sein.
-
-### Direkte lokale Docker-Verbindung – optional
-
-Wenn beide Dienste auf demselben Docker-Host laufen, kann der Importer statt
-des öffentlichen Umwegs direkt `http://learnhouse` verwenden. Dazu:
-
-1. `docker-compose.local.yml.example` nach `docker-compose.local.yml` kopieren.
-2. Prüfen, dass das externe Docker-Netzwerk `learnhouse` existiert.
-3. Beide Dateien gemeinsam starten:
-
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
-   ```
-
-Die lokale Ergänzungsdatei ist von Git ausgeschlossen. Dadurch bleibt die
-Standardinstallation portabel und öffentliche Repository-Inhalte enthalten
-keine host-spezifische Netzwerk-Konfiguration.
-
-## Konfiguration in Docker Compose
-
-Für ZimaOS/CasaOS werden Benutzername, Passwort und Session-Schlüssel direkt im
-Block `environment` der [`docker-compose.yml`](docker-compose.yml) eingetragen.
-Die Datei enthält nur sichere Platzhalter; der Dienst startet nicht, solange sie
-unverändert sind. Lokale Änderungen an dieser Datei dürfen nicht committed werden.
-
-`COOKIE_SECURE` bleibt für reines LAN-HTTP auf `false`. Bei Zugriff über einen
-HTTPS-Reverse-Proxy muss der Wert auf `true` gesetzt werden.
-
-## LearnHouse-Ziele und API-Tokens
-
-API-Tokens stehen bewusst weder in Compose noch in einer Datenbank oder im
-Browser. Beim ersten Start legt der Container im gemounteten lokalen Ordner
-`./config` diese Datei an:
-
-```env
-LEARNHOUSE_TOKEN_1=
-LEARNHOUSE_ORG_1=
-LEARNHOUSE_URL_1=
-LEARNHOUSE_ORG_ID_1=
-LEARNHOUSE_ORG_SLUG_1=
-```
-
-Der Betreiber ergänzt die Werte lokal in `config/learnhouse-importer.env`. Der
-Ordner ist per `.gitignore` ausgeschlossen und wird nicht in das Docker-Image
-kopiert.
-
-`LEARNHOUSE_ORG_1` ist ausschließlich der sichtbare Name im Importer, zum
-Beispiel `Example academy`. Er kann weggelassen oder auskommentiert
-werden; dann zeigt die Oberfläche nur `Token 1` an. Tokeninhalte werden nie
-angezeigt oder an den Browser gesendet.
-
-Bei genau einem gesetzten Token startet der Import direkt in dieses Ziel. Bei
-mehreren Tokens zeigt der Importer vor dem Start einen Dialog zur Auswahl und
-Bestätigung des Ziels. Weitere Ziele werden fortlaufend nummeriert:
-
-```env
-LEARNHOUSE_TOKEN_2=lh_...
-LEARNHOUSE_ORG_2=Interne Akademie
-LEARNHOUSE_URL_2=https://learn.intern.example
-LEARNHOUSE_ORG_ID_2=7
-LEARNHOUSE_ORG_SLUG_2=interne-akademie
-```
-
-Die Server-URL, ID und der Slug sind für jedes abweichende Ziel erforderlich,
-weil LearnHouse-API-Tokens organisationsgebunden sind. Lässt man sie bei
-`Token 1` weg, verwendet der Importer die Rückfallwerte `LEARNHOUSE_URL`,
-`LEARNHOUSE_ORG_ID` und `LEARNHOUSE_ORG_SLUG` aus Docker Compose. Bestehende
-Installationen mit `LEARNHOUSE_API_TOKEN=` funktionieren weiterhin als
-einzelnes Ziel.
-
-Das Vorhandensein eines Tokens wird beim Aufruf der Oberfläche geprüft; seine
-Gültigkeit wird erst beim Verbindungs-Test beziehungsweise Import geprüft.
-
-Der Container muss den Konfigurationsordner beschreiben dürfen, damit er die
-Vorlage beim ersten Start anlegen kann. Die Kursquelle unter `/imports` bleibt
-hingegen read-only.
-
-## Importverlauf und Wiederaufnahme
-
-Der Importer speichert Job-, Kurs-, Kapitel- und Lektionsstatus in der lokalen
-SQLite-Datenbank des `/data`-Volumes. Der API-Token wird dabei niemals
-gespeichert. Nach einem Container-Neustart werden laufende Jobs als unterbrochen
-markiert und können in der Oberfläche fortgesetzt werden. Bereits erfolgreich
-hochgeladene Lektionen werden dabei nicht erneut gesendet.
-
-Ein Import mit Dateifehlern wird als Teilimport markiert. Erfolgreich erstellte
-LearnHouse-Daten werden im MVP nicht automatisch gelöscht.
-
-## Lokale Kursquelle nach Erfolg löschen (optional)
-
-Die Kursquelle bleibt standardmäßig read-only. Das schützt Originaldateien und
-blendet die Löschaktion aus. Wenn `./imports` ausdrücklich nur ein
-wegwerfbarer Staging-Bereich mit eigener Sicherung ist, kann die Aktion gezielt
-aktiviert werden:
-
-1. `docker-compose.cleanup.yml.example` nach `docker-compose.cleanup.yml`
-   kopieren.
-2. Den Dienst mit beiden Dateien starten:
-
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.cleanup.yml up -d
-   ```
-
-Danach erscheint im Verlauf für einen vollständig erfolgreichen Job die Aktion
-**Kursquelle löschen**. Ein Bestätigungsdialog nennt die Anzahl der betroffenen
-Quellordner. Erst nach dieser Bestätigung werden ausschließlich die direkten,
-für diesen Job gespeicherten Kursordner unter `/imports` entfernt. Der
-LearnHouse-Kurs und seine hochgeladenen Inhalte bleiben unverändert. Teilimporte
-oder fehlgeschlagene Jobs können nie über diese Aktion gelöscht werden.
-
-## Sicherheit
-
-- Der Importer verwendet eine eigene Login-Session und speichert keine Nutzer
-  in einer Datenbank.
-- Der LearnHouse-Token bleibt ausschließlich in der lokalen Konfigurationsdatei
-  auf dem Host und wird nicht an den Browser ausgeliefert.
-- Das Repository enthält keine echten Zugangsdaten.
-- Der Importer schreibt nie direkt in die LearnHouse-Datenbank und kopiert nie
-  Dateien direkt in das LearnHouse-Content-Verzeichnis.
+- `dev` is the development branch.
+- `prod` contains release-candidate and production-ready states only.
+- Release candidates are created from `prod`, never directly from `dev`.
