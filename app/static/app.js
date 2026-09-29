@@ -28,6 +28,11 @@ function tokenConfigured() { return shell?.dataset.tokenConfigured === 'true' }
 function sourceCleanupEnabled() { return shell?.dataset.sourceCleanup === 'true' }
 function selectedTargetId() { return $('#targetSelect')?.value || state.targets[0]?.id || '' }
 function statusClass(status) { return ['success', 'partial', 'failed', 'interrupted'].includes(status) ? status : '' }
+function chapterLabel(chapter) {
+  const name = chapter.name.replace(/^\s*section\s+\d+\s*[-–—:.)]?\s*/i, '').trim() || chapter.name
+  const lessons = chapter.lesson_count === 1 ? 'Lektion' : 'Lektionen'
+  return `${name} (${chapter.lesson_count} ${lessons})`
+}
 
 function renderCourses() {
   const body = $('#courseRows')
@@ -58,7 +63,7 @@ function renderCourses() {
     const chapters = element('div', null, 'chapter-list')
     for (const chapter of course.chapters) {
       const chapterNode = element('details', null, 'course-chapter'); const summary = element('summary')
-      summary.append(element('strong', chapter.name)); chapterNode.append(summary, element('span', `${chapter.lesson_count} Lektionen`, 'chapter-count'))
+      summary.append(element('strong', chapterLabel(chapter))); chapterNode.append(summary)
       const lessons = element('ol', null, 'chapter-lessons'); for (const lesson of chapter.lessons) lessons.append(element('li', lesson.title))
       chapterNode.append(lessons); chapters.append(chapterNode)
     }
