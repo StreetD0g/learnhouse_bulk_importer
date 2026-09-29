@@ -1,8 +1,22 @@
 # LearnHouse Course Importer
 
-Ein self-hosted Bulk-Importer für lokale LearnHouse-Kursordner. Das Projekt befindet sich im Aufbau.
+> [!WARNING]
+> **Vibe-coded und experimentell:** Dieses Projekt wurde mit KI-Unterstützung
+> entwickelt und befindet sich im frühen Release-Candidate-Stadium. Bitte vor
+> jedem Import eine Sicherung der Kursquelle anlegen, Imports zunächst mit
+> Testdaten prüfen und den Code vor einem produktiven Einsatz selbst bewerten.
+> Nutzung erfolgt auf eigene Verantwortung.
+
+Ein self-hosted Bulk-Importer für lokale LearnHouse-Kursordner.
 
 > Dieses Projekt ist nicht mit LearnHouse verbunden oder von LearnHouse unterstützt.
+
+## Status
+
+**v0.1 Release Candidate.** Der Importer ist für lokale Kursordner und eine
+manuell konfigurierte LearnHouse-API-Verbindung ausgelegt. Er ist kein
+offizielles LearnHouse-Produkt und noch nicht als vollständig abgesicherte
+Produktivsoftware zu verstehen.
 
 ## Funktionsumfang des MVP
 
