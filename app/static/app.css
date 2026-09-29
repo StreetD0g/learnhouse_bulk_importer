@@ -119,9 +119,9 @@ tbody tr { cursor: default; }
 .course-details[open] > summary { border-bottom: 1px solid var(--line); }
 .course-details[open] > summary::after, .course-chapter[open] > summary::after { content: '-'; }
 .chapter-list { display: grid; gap: .55rem; padding: .75rem; }
-.course-chapter { border: 1px solid rgb(57 85 115 / 65%); border-radius: .55rem; background: rgb(5 16 29 / 45%); }
+.course-chapter { position: relative; border: 1px solid rgb(57 85 115 / 65%); border-radius: .55rem; background: rgb(5 16 29 / 45%); }
 .course-chapter > summary { padding: .65rem 10rem .65rem .75rem; }
-.course-chapter > summary .chapter-count { position: absolute; top: 50%; right: 2.75rem; width: 6.5rem; transform: translateY(-50%); text-align: right; white-space: nowrap; }
+.course-chapter > .chapter-count { position: absolute; top: .65rem; right: 2.75rem; width: 6.5rem; color: var(--muted); font-size: .76rem; line-height: 1.55rem; text-align: right; white-space: nowrap; pointer-events: none; }
 .course-chapter[open] > summary { border-bottom: 1px solid rgb(57 85 115 / 65%); }
 .chapter-lessons { display: grid; gap: .25rem; margin: .75rem .75rem .75rem 2rem; padding: 0; color: var(--muted); font-size: .84rem; }
 .course-skipped { margin: 0; padding: .7rem; color: #ffe0a1; border: 1px solid #93661b; border-radius: .55rem; background: rgb(111 71 10 / 18%); font-size: .82rem; }

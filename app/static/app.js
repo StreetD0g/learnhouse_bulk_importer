@@ -58,7 +58,7 @@ function renderCourses() {
     const chapters = element('div', null, 'chapter-list')
     for (const chapter of course.chapters) {
       const chapterNode = element('details', null, 'course-chapter'); const summary = element('summary')
-      summary.append(element('strong', chapter.name), element('span', `${chapter.lesson_count} Lektionen`, 'chapter-count')); chapterNode.append(summary)
+      summary.append(element('strong', chapter.name)); chapterNode.append(summary, element('span', `${chapter.lesson_count} Lektionen`, 'chapter-count'))
       const lessons = element('ol', null, 'chapter-lessons'); for (const lesson of chapter.lessons) lessons.append(element('li', lesson.title))
       chapterNode.append(lessons); chapters.append(chapterNode)
     }
