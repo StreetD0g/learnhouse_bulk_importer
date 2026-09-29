@@ -92,6 +92,11 @@ def configured_target(target_id: str | None = None):
 def dashboard_context(request: Request) -> dict[str, object]:
     courses = scan_courses()
     jobs = store.jobs()
+    unresolved_jobs = [
+        job
+        for job in jobs
+        if job["status"] in {"partial", "failed", "interrupted"} and not store.job_is_superseded(job["id"])
+    ]
     return {
         "learnhouse_url": settings.learnhouse_url,
         "org_id": settings.learnhouse_org_id,
@@ -104,7 +109,7 @@ def dashboard_context(request: Request) -> dict[str, object]:
             "ready": len(courses),
             "running": sum(job["status"] == "running" for job in jobs),
             "success": sum(job["status"] == "success" for job in jobs),
-            "problems": sum(job["status"] in {"partial", "failed", "interrupted"} for job in jobs),
+            "problems": len(unresolved_jobs),
         },
     }
 
